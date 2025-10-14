@@ -1,0 +1,10 @@
+^C:\USERS\LUISFD1\DESKTOP\MOTORCIN\BUILD\CMAKEFILES\D9A492F3DC061B6E62C14935E92E482F\GENERATE.STAMP.RULE
+setlocal
+C:\Users\luisfd1\Desktop\CMake\bin\cmake.exe -SC:/Users/luisfd1/Desktop/Motorcin -BC:/Users/luisfd1/Desktop/Motorcin/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/luisfd1/Desktop/Motorcin/build/Motorcin.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
