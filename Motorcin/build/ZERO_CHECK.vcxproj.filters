@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin-\Motorcin\build\CMakeFiles\b6d4d62326ec5d94eb9fc551a7bfef24\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{3D340F8C-7297-3FF4-984A-424044E0AFCB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

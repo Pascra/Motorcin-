@@ -5,7 +5,7 @@
       "name": "default",
       "inherits": "vcpkg",
       "environment": {
-        "VCPKG_ROOT": "C:/Users/luisfd1/Desktop/vcpkg"
+        "VCPKG_ROOT": "C:/Users/arnaupd2/Desktop/vcpkg"
       }
     }
   ]

@@ -1,0 +1,8 @@
+﻿  Application.cpp
+  Input.cpp
+  Renderer.cpp
+  Time.cpp
+  Window.cpp
+C:\Users\arnaupd2\Documents\GitHub\Motorcin-\Motorcin\src\core\Window.cpp(6,17): warning C4804: '<': unsafe use of type 'bool' in operation
+  Generating Code...
+  Motorcin.vcxproj -> C:\Users\arnaupd2\Documents\GitHub\Motorcin-\Motorcin\build\Debug\Motorcin.exe
