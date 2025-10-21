@@ -1,0 +1,10 @@
+^C:\USERS\ARNAU\ONEDRIVE\DOCUMENTOS\GITHUB\MOTORCIN\BUILD\CMAKEFILES\98B0279007E5D2049074CE4BADB90DFB\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/Arnau/OneDrive/Documentos/GitHub/Motorcin -BC:/Users/Arnau/OneDrive/Documentos/GitHub/Motorcin/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Arnau/OneDrive/Documentos/GitHub/Motorcin/build/Motorcin.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
