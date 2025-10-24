@@ -25,3 +25,5 @@ vcpkg-manifest-install.log
 
 ## Manifest Mode
 vcpkg_installed/
+
+build/

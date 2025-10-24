@@ -16,4 +16,3 @@ private:
     SDL_GLContext glContext = nullptr;
     bool shouldClose = false;
 };
-#pragma once
