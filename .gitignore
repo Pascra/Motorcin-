@@ -13,6 +13,7 @@ _deps
 
 ### CMake Patch ###
 CMakeUserPresets.json
+CMakeUserPresets.txt
 
 # External projects
 *-prefix/

@@ -1,0 +1,36 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\arnaupd2\\Documents\\GitHub\\Motorcin\\build\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{1F5BF129-434E-3FD2-9FD2-1B8E5C2E5118}|Motorcin.vcxproj|C:\\Users\\arnaupd2\\Documents\\GitHub\\Motorcin\\src\\Main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Main.cpp",
+              "DocumentMoniker": "C:\\Users\\arnaupd2\\Documents\\GitHub\\Motorcin\\src\\Main.cpp",
+              "RelativeDocumentMoniker": "..\\src\\Main.cpp",
+              "ToolTip": "C:\\Users\\arnaupd2\\Documents\\GitHub\\Motorcin\\src\\Main.cpp",
+              "RelativeToolTip": "..\\src\\Main.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-10-24T06:35:19.489Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
