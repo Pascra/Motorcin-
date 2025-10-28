@@ -2,6 +2,8 @@
 #include <glad/glad.h>
 #include <iostream>
 #include <vector>
+#include <string>
+
 
 Shader::~Shader() {
     if (m_Program) {
@@ -20,18 +22,15 @@ bool Shader::CompileFromSource(const char* vertexSrc, const char* fragmentSrc) {
     glAttachShader(m_Program, fs);
     glLinkProgram(m_Program);
 
-    int success = 0;
-    glGetProgramiv(m_Program, GL_LINK_STATUS, &success);
-    if (!success) {
-        int logLen = 0;
-        glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &logLen);
-        std::vector<char> log(logLen);
-        glGetProgramInfoLog(m_Program, logLen, nullptr, log.data());
+    int ok = 0;
+    glGetProgramiv(m_Program, GL_LINK_STATUS, &ok);
+    if (!ok) {
+        int len = 0; glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &len);
+        std::vector<char> log(len);
+        glGetProgramInfoLog(m_Program, len, nullptr, log.data());
         std::cerr << "PROGRAM LINK ERROR:\n" << log.data() << std::endl;
-        glDeleteShader(vs);
-        glDeleteShader(fs);
-        glDeleteProgram(m_Program);
-        m_Program = 0;
+        glDeleteShader(vs); glDeleteShader(fs);
+        glDeleteProgram(m_Program); m_Program = 0;
         return false;
     }
 
@@ -45,28 +44,24 @@ bool Shader::CompileShader(unsigned int& outId, unsigned int type, const char* s
     glShaderSource(outId, 1, &src, nullptr);
     glCompileShader(outId);
 
-    int success = 0;
-    glGetShaderiv(outId, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        int logLen = 0;
-        glGetShaderiv(outId, GL_INFO_LOG_LENGTH, &logLen);
-        std::vector<char> log(logLen);
-        glGetShaderInfoLog(outId, logLen, nullptr, log.data());
+    int ok = 0;
+    glGetShaderiv(outId, GL_COMPILE_STATUS, &ok);
+    if (!ok) {
+        int len = 0; glGetShaderiv(outId, GL_INFO_LOG_LENGTH, &len);
+        std::vector<char> log(len);
+        glGetShaderInfoLog(outId, len, nullptr, log.data());
         std::cerr << (type == GL_VERTEX_SHADER ? "VERTEX" : "FRAGMENT")
             << " SHADER COMPILE ERROR:\n" << log.data() << std::endl;
-        glDeleteShader(outId);
-        outId = 0;
+        glDeleteShader(outId); outId = 0;
         return false;
     }
     return true;
 }
 
-void Shader::Use() const {
-    glUseProgram(m_Program);
-}
+void Shader::Use() const { glUseProgram(m_Program); }
 
 unsigned int Shader::ReleaseProgram() {
-    unsigned int tmp = m_Program;
+    unsigned int t = m_Program;
     m_Program = 0;
-    return tmp;
+    return t;
 }

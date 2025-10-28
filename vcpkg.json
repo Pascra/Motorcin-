@@ -4,6 +4,6 @@
   "dependencies": [
     "sdl3",
     "glad",
-     "glfw3"
+     "assimp"
   ]
 }

@@ -7,7 +7,7 @@
     <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Input.cpp">
+    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Renderer.cpp">
@@ -16,10 +16,13 @@
     <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Time.cpp">
+    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Window.cpp">
+    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -30,13 +33,5 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{8ACE0533-DE93-3264-BAE7-C56441896480}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\src\core\Application.h" />
-    <ClInclude Include="..\src\core\Input.h" />
-    <ClInclude Include="..\src\core\Renderer.h" />
-    <ClInclude Include="..\src\core\Shader.h" />
-    <ClInclude Include="..\src\core\Time.h" />
-    <ClInclude Include="..\src\core\Window.h" />
   </ItemGroup>
 </Project>
