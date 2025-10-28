@@ -2,7 +2,7 @@
 #include <iostream>
 
 Application::Application() {
-    window = new Window("Motorcin", 800, 600);
+    window = new Window("Motorcin Engine", 800, 600);
 }
 
 Application::~Application() {
@@ -10,7 +10,7 @@ Application::~Application() {
 }
 
 void Application::Run() {
-    if (!window || !window->IsValid()) {         // <- COMPROBAR VALIDEZ
+    if (!window || !window->IsValid()) {
         std::cerr << "Window / SDL failed to initialize. Exiting.\n";
         return;
     }
@@ -20,17 +20,21 @@ void Application::Run() {
         return;
     }
 
-    bool drawRectangle = true;
+    std::cout << "\n=== Motorcin Engine ===\n";
+    std::cout << "Drag & Drop an FBX file to load it!\n";
+    std::cout << "Press ESC to exit\n\n";
 
     while (!window->ShouldClose()) {
         window->PollEvents();
-        Renderer::Clear(0.2f, 0.3f, 0.3f, 1.0f);
 
-        if (drawRectangle) Renderer::DrawRectangleIndexed(false);
-        else               Renderer::DrawTriangle();
+        Renderer::Clear(0.1f, 0.1f, 0.15f, 1.0f);
+
+        // IMPORTANTE: Siempre intenta dibujar el modelo
+        Renderer::DrawLoadedModel();
 
         window->SwapBuffers();
     }
 
     Renderer::Shutdown();
+    std::cout << "Engine closed cleanly\n";
 }

@@ -14,7 +14,7 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 
-# Archivos fuente (explícitos para que no se “escape” ninguno)
+# Archivos fuente (explícitos)
 add_executable(Motorcin
   src/Main.cpp
   src/core/Application.cpp
@@ -28,13 +28,13 @@ add_executable(Motorcin
 
 target_include_directories(Motorcin PRIVATE src)
 
-# En MSVC compilar en paralelo y desactivar min/max de Windows
+# MSVC: compilar en paralelo y evitar choque con min/max de Windows
 if (MSVC)
   target_compile_options(Motorcin PRIVATE /MP)
   target_compile_definitions(Motorcin PRIVATE NOMINMAX)
 endif()
 
-# Con SDL3 solemos querer manejar nuestro propio main
+# Manejar nuestro propio main (sin SDL3main)
 target_compile_definitions(Motorcin PRIVATE SDL_MAIN_HANDLED)
 
 # Enlaces
@@ -45,16 +45,15 @@ target_link_libraries(Motorcin
     assimp::assimp
 )
 
-# Copiar DLLs al lado del .exe (útil al ejecutar desde VS)
+# Copiar DLLs al lado del .exe tras compilar
 if (WIN32)
   add_custom_command(TARGET Motorcin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:assimp::assimp>
-      $<TARGET_FILE_DIR:Motorcin>
-  )
+      $<TARGET_FILE:SDL3::SDL3>
+      $<TARGET_FILE_DIR:Motorcin>)
+
   add_custom_command(TARGET Motorcin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:SDL3::SDL3>
-      $<TARGET_FILE_DIR:Motorcin>
-  )
+      $<TARGET_FILE:assimp::assimp>
+      $<TARGET_FILE_DIR:Motorcin>)
 endif()
