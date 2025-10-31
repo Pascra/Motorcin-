@@ -1,5 +1,6 @@
 ﻿#include "Window.h"
 #include "Renderer.h"
+#include "Input.h"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -26,13 +27,11 @@ Window::Window(const std::string& title, int width, int height)
 {
     DumpSDLInfo();
 
-    // SDL3: devuelve bool (true=éxito), no int
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
         return;
     }
 
-    // Atributos del contexto OpenGL 3.3 Core
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -40,7 +39,6 @@ Window::Window(const std::string& title, int width, int height)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    // Crear ventana
     window = SDL_CreateWindow(title.c_str(), width, height,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
@@ -49,7 +47,6 @@ Window::Window(const std::string& title, int width, int height)
         return;
     }
 
-    // Crear contexto OpenGL
     glContext = SDL_GL_CreateContext(window);
     if (!glContext) {
         std::cerr << "SDL_GL_CreateContext failed: " << SDL_GetError() << "\n";
@@ -59,7 +56,6 @@ Window::Window(const std::string& title, int width, int height)
         return;
     }
 
-    // Activar contexto (SDL3: devuelve bool)
     if (!SDL_GL_MakeCurrent(window, glContext)) {
         std::cerr << "SDL_GL_MakeCurrent failed: " << SDL_GetError() << "\n";
         SDL_GL_DestroyContext(glContext);
@@ -70,12 +66,10 @@ Window::Window(const std::string& title, int width, int height)
         return;
     }
 
-    // VSync (SDL3: devuelve bool)
     if (!SDL_GL_SetSwapInterval(1)) {
         std::cerr << "Warning: SDL_GL_SetSwapInterval failed: " << SDL_GetError() << "\n";
     }
 
-    // Inicializar GLAD
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         std::cerr << "Failed to initialize GLAD\n";
         SDL_GL_DestroyContext(glContext);
@@ -86,10 +80,7 @@ Window::Window(const std::string& title, int width, int height)
         return;
     }
 
-    // Viewport inicial
     glViewport(0, 0, width, height);
-
-    // Habilitar depth test para modelos 3D
     glEnable(GL_DEPTH_TEST);
 
     valid_ = true;
@@ -101,6 +92,8 @@ void Window::PollEvents()
 {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
+        Input::ProcessEvent(e);
+
         switch (e.type) {
         case SDL_EVENT_QUIT:
             shouldClose = true;
@@ -116,19 +109,11 @@ void Window::PollEvents()
             break;
 
         case SDL_EVENT_DROP_FILE: {
-            // En SDL3, e.drop.data es const char* y NO debe liberarse manualmente
-            if (e.drop.data) {
-                std::string path(e.drop.data);
-
-                if (!path.empty()) {
-                    std::cout << "File dropped: " << path << "\n";
-                    Renderer::OnFileDropped(path.c_str());
-                }
+            if (e.drop.data && e.drop.data[0] != '\0') {
+                std::cout << "File dropped: " << e.drop.data << "\n";
+                Renderer::OnFileDropped(e.drop.data);
             }
             break;
-       
-        
-            
         }
 
         default:

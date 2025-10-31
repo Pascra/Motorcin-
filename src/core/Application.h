@@ -1,6 +1,7 @@
 #pragma once
 #include "Window.h"
 #include "Renderer.h"
+#include "Camera.h"
 #include <string>
 
 class Application {
@@ -11,4 +12,5 @@ public:
 
 private:
     Window* window = nullptr;
+    Camera* camera = nullptr;
 };

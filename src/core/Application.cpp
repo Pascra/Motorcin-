@@ -1,11 +1,15 @@
 #include "Application.h"
+#include "Input.h"
+#include "Time.h"
 #include <iostream>
 
 Application::Application() {
     window = new Window("Motorcin Engine", 800, 600);
+    camera = new Camera();
 }
 
 Application::~Application() {
+    delete camera;
     delete window;
 }
 
@@ -20,17 +24,28 @@ void Application::Run() {
         return;
     }
 
+    Input::Init();
+    Time::Init();
+
     std::cout << "\n=== Motorcin Engine ===\n";
-    std::cout << "Drag & Drop an FBX file to load it!\n";
-    std::cout << "Press ESC to exit\n\n";
+    std::cout << "Controls:\n";
+    std::cout << "  - Drag & Drop FBX files to load\n";
+    std::cout << "  - Hold RIGHT MOUSE BUTTON + move mouse to rotate camera\n";
+    std::cout << "  - W/A/S/D to move camera\n";
+    std::cout << "  - Q/E to move up/down\n";
+    std::cout << "  - Mouse wheel to zoom\n";
+    std::cout << "  - ESC to exit\n\n";
 
     while (!window->ShouldClose()) {
+        Time::Update();
+        Input::Update();
+
         window->PollEvents();
 
-        Renderer::Clear(0.1f, 0.1f, 0.15f, 1.0f);
+        camera->Update(Time::GetDeltaTime());
 
-        // IMPORTANTE: Siempre intenta dibujar el modelo
-        Renderer::DrawLoadedModel();
+        Renderer::Clear(0.1f, 0.1f, 0.15f, 1.0f);
+        Renderer::DrawLoadedModel(camera);
 
         window->SwapBuffers();
     }

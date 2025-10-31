@@ -1,24 +1,24 @@
 ﻿#pragma once
 #include <string>
 
+class Camera; // Forward declaration
+
 class Renderer {
 public:
-    // Inicialización / apagado
     static bool Init();
     static void Shutdown();
 
-    // Limpieza y primitivas
     static void Clear(float r, float g, float b, float a);
     static void DrawTriangle();
     static void DrawRectangleIndexed(bool wireframe);
 
-    // Modelo (drag & drop y carga desde ruta)
     static void OnFileDropped(const char* path);
     static bool LoadModelFromPath(const std::string& path);
-    static void DrawLoadedModel();  // ← PÚBLICO
+    static void DrawLoadedModel(Camera* camera); // <- CAMBIADO: recibe cámara
 
-    // Viewport
     static void SetViewportSize(int w, int h);
+    static int GetViewportWidth() { return sViewportW; }
+    static int GetViewportHeight() { return sViewportH; }
 
 private:
     static unsigned int sProgram;
@@ -30,6 +30,4 @@ private:
     static size_t       sModelIndexCount;
 
     static int sViewportW, sViewportH;
-
-    static void UseModelShaderAndSetMVP();
 };

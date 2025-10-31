@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "Shader.h"
+#include "Camera.h"
 #include <glad/glad.h>
 
 #include <string>
@@ -30,9 +31,7 @@ int Renderer::sViewportW = 800;
 int Renderer::sViewportH = 600;
 
 static bool sInitialized = false;
-static float sRotationY = 0.0f;
 static float sModelScale = 1.0f;
-static float sCameraDistance = 5.0f;
 
 // Shaders
 static const char* kVertexSrc = R"(#version 330 core
@@ -56,53 +55,25 @@ void main(){
 static const char* kModelFS = R"(#version 330 core
 out vec4 FragColor;
 void main(){ 
-    FragColor = vec4(0.0, 1.0, 0.0, 1.0); // Verde brillante
+    FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 }
 )";
 
 // Helpers de matrices
+static void MatMul(float o[16], const float a[16], const float b[16]) {
+    float r[16];
+    for (int row = 0; row < 4; ++row)
+        for (int col = 0; col < 4; ++col)
+            r[col + row * 4] = a[0 + row * 4] * b[col + 0 * 4]
+            + a[1 + row * 4] * b[col + 1 * 4]
+            + a[2 + row * 4] * b[col + 2 * 4]
+            + a[3 + row * 4] * b[col + 3 * 4];
+    for (int i = 0; i < 16; ++i) o[i] = r[i];
+}
+
 static void MatIdentity(float m[16]) {
     for (int i = 0; i < 16; ++i) m[i] = 0.f;
     m[0] = m[5] = m[10] = m[15] = 1.f;
-}
-
-static void MatPerspective(float m[16], float fovy, float aspect, float zn, float zf) {
-    const float f = 1.0f / std::tan(fovy * 0.5f);
-    for (int i = 0; i < 16; ++i) m[i] = 0.f;
-    m[0] = f / aspect;
-    m[5] = f;
-    m[10] = (zf + zn) / (zn - zf);
-    m[11] = -1.f;
-    m[14] = (2.f * zf * zn) / (zn - zf);
-}
-
-static void MatTranslate(float m[16], float x, float y, float z) {
-    MatIdentity(m);
-    m[12] = x; m[13] = y; m[14] = z;
-}
-
-static void MatScale(float m[16], float s) {
-    MatIdentity(m);
-    m[0] = m[5] = m[10] = s;
-}
-
-static void MatRotateY(float m[16], float angleRad) {
-    MatIdentity(m);
-    float c = std::cos(angleRad);
-    float s = std::sin(angleRad);
-    m[0] = c;  m[2] = s;
-    m[8] = -s; m[10] = c;
-}
-
-static void MatMul(float o[16], const float a[16], const float b[16]) {
-    float r[16];
-    for (int r0 = 0; r0 < 4; ++r0)
-        for (int c = 0; c < 4; ++c)
-            r[c + r0 * 4] = a[0 + r0 * 4] * b[c + 0 * 4]
-            + a[1 + r0 * 4] * b[c + 1 * 4]
-            + a[2 + r0 * 4] * b[c + 2 * 4]
-            + a[3 + r0 * 4] * b[c + 3 * 4];
-    for (int i = 0; i < 16; ++i) o[i] = r[i];
 }
 
 bool Renderer::Init() {
@@ -280,7 +251,6 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     float centerY = (minY + maxY) * 0.5f;
     float centerZ = (minZ + maxZ) * 0.5f;
 
-    // Imprimir bounding box
     std::cout << "\n*** BOUNDING BOX ***" << std::endl;
     std::cout << "X: [" << minX << ", " << maxX << "] size: " << (maxX - minX) << std::endl;
     std::cout << "Y: [" << minY << ", " << maxY << "] size: " << (maxY - minY) << std::endl;
@@ -292,14 +262,11 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     float sizeZ = maxZ - minZ;
     float maxSize = std::max({ sizeX, sizeY, sizeZ });
 
-    // Calcular escala para que quepa en un cubo de 2x2x2
     sModelScale = 2.0f / maxSize;
-    sCameraDistance = 3.5f;
 
     std::cout << "Auto scale: " << sModelScale << std::endl;
-    std::cout << "Camera distance: " << sCameraDistance << std::endl;
 
-    // CENTRAR EL MODELO: Restar el centro del bounding box
+    // CENTRAR EL MODELO
     std::vector<float> positions;
     positions.reserve(mesh->mNumVertices * 3);
 
@@ -350,64 +317,43 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     return true;
 }
 
-void Renderer::UseModelShaderAndSetMVP() {
-    glUseProgram(sModelProgram);
-
-    sRotationY += 0.01f;
-
-    float P[16], V[16], R[16], S[16], M[16], temp[16], PV[16], MVP[16];
-
-    const float aspect = (sViewportH > 0) ? (float)sViewportW / (float)sViewportH : 1.f;
-    MatPerspective(P, 45.f * 3.1415926f / 180.f, aspect, 0.1f, 100.f);
-
-    MatTranslate(V, 0.f, 0.f, -sCameraDistance);
-
-    MatScale(S, sModelScale);
-    MatRotateY(R, sRotationY);
-
-    MatMul(M, R, S);
-    MatMul(PV, P, V);
-    MatMul(MVP, PV, M);
-
-    const int loc = glGetUniformLocation(sModelProgram, "uMVP");
-    if (loc == -1) {
-        static bool warned = false;
-        if (!warned) {
-            std::cerr << "WARNING: uMVP uniform not found!" << std::endl;
-            warned = true;
-        }
-    }
-    glUniformMatrix4fv(loc, 1, GL_FALSE, MVP);
-}
-
-void Renderer::DrawLoadedModel() {
-    if (!sModelVAO || sModelIndexCount == 0) {
+void Renderer::DrawLoadedModel(Camera* camera) {
+    if (!sModelVAO || sModelIndexCount == 0 || !camera) {
         return;
     }
 
-    static int frameCount = 0;
-    if (frameCount == 0) {
-        std::cout << "\n=== DRAWING MODEL ===" << std::endl;
-        std::cout << "VAO: " << sModelVAO << std::endl;
-        std::cout << "Index count: " << sModelIndexCount << std::endl;
-        std::cout << "Program: " << sModelProgram << std::endl;
-    }
-    frameCount++;
+    glUseProgram(sModelProgram);
 
-    // Wireframe para ver algo
+    // Obtener matrices de la cámara
+    float P[16], V[16], PV[16], M[16], MVP[16];
+
+    float aspect = 1.0f;
+    if (sViewportH > 0) {
+        aspect = (float)sViewportW / (float)sViewportH;
+    }
+
+    camera->GetProjectionMatrix(P, aspect);
+    camera->GetViewMatrix(V);
+
+    // Matriz modelo (identidad)
+    MatIdentity(M);
+
+    // MVP = P * V * M
+    MatMul(PV, P, V);
+    MatMul(MVP, PV, M);
+
+    int loc = glGetUniformLocation(sModelProgram, "uMVP");
+    if (loc != -1) {
+        glUniformMatrix4fv(loc, 1, GL_FALSE, MVP);
+    }
+
+    // Dibujar wireframe
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_CULL_FACE);
-
-    UseModelShaderAndSetMVP();
 
     glBindVertexArray(sModelVAO);
     glDrawElements(GL_TRIANGLES, (GLsizei)sModelIndexCount, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        std::cerr << "OpenGL Error in DrawLoadedModel: " << err << std::endl;
-    }
 }
