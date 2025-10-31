@@ -2,13 +2,13 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\arnaupd2\Documents\GitHub\Motorcin\build\x64\Debug\ZERO_CHECK</FullPath>
+      <FullPath>C:\Users\luisfd1\Documents\GitHub\Motorcin\build\x64\Debug\ZERO_CHECK</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>C:\Users\arnaupd2\Documents\GitHub\Motorcin\build\Debug\Motorcin.exe</FullPath>
+      <FullPath>C:\Users\luisfd1\Documents\GitHub\Motorcin\build\Debug\Motorcin.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>C:\Users\arnaupd2\Documents\GitHub\Motorcin\build\x64\Debug\ALL_BUILD</FullPath>
+      <FullPath>C:\Users\luisfd1\Documents\GitHub\Motorcin\build\x64\Debug\ALL_BUILD</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

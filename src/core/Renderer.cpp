@@ -226,6 +226,7 @@ void Renderer::Shutdown() {
 void Renderer::Clear(float r, float g, float b, float a) {
     glClearColor(r, g, b, a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);  
 }
 
 void Renderer::DrawTriangle() {
@@ -479,8 +480,10 @@ void Renderer::DrawLoadedModel(Camera* camera) {
     else {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glLineWidth(1.0f);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
+        // CAMBIO: Desactivar culling para ver ambas caras
+        glDisable(GL_CULL_FACE);  // <--- CAMBIA ESTO
+        // glEnable(GL_CULL_FACE);  // <--- COMENTA ESTO
+        // glCullFace(GL_BACK);     // <--- COMENTA ESTO
     }
 
     // Dibujar cada mesh

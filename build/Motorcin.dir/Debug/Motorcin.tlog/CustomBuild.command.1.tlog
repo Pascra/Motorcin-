@@ -1,6 +1,6 @@
-^C:\USERS\ARNAUPD2\DOCUMENTS\GITHUB\MOTORCIN\CMAKELISTS.TXT
+^C:\USERS\LUISFD1\DOCUMENTS\GITHUB\MOTORCIN\CMAKELISTS.TXT
 setlocal
-C:\Users\arnaupd2\Desktop\cmake-3.31.9-windows-x86_64\bin\cmake.exe -SC:/Users/arnaupd2/Documents/GitHub/Motorcin -BC:/Users/arnaupd2/Documents/GitHub/Motorcin/build --check-stamp-file C:/Users/arnaupd2/Documents/GitHub/Motorcin/build/CMakeFiles/generate.stamp
+C:\Users\luisfd1\Desktop\CMake\bin\cmake.exe -SC:/Users/luisfd1/Documents/GitHub/Motorcin -BC:/Users/luisfd1/Documents/GitHub/Motorcin/build --check-stamp-file C:/Users/luisfd1/Documents/GitHub/Motorcin/build/CMakeFiles/generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

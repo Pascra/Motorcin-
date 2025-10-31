@@ -12,6 +12,7 @@ public:
     void SetPosition(float x, float y, float z);
     void Rotate(float yaw, float pitch);
     void Zoom(float amount);
+    void MoveForward(float amount);
 
     // Getters
     void GetPosition(float& x, float& y, float& z) const;
@@ -19,6 +20,7 @@ public:
     // NUEVO: Focus en un punto
     void FocusOnPoint(float x, float y, float z, float distance);
     void LookAt(float x, float y, float z);
+    void SetSceneSize(float size);
 
 private:
     float mPosX, mPosY, mPosZ;
@@ -32,4 +34,5 @@ private:
     float mForwardX, mForwardY, mForwardZ;
     float mRightX, mRightY, mRightZ;
     float mUpX, mUpY, mUpZ;
+    float mSceneSize;
 };

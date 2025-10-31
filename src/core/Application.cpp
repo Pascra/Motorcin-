@@ -46,22 +46,30 @@ void Application::Run() {
 
         window->PollEvents();
 
-        // AUTO-FOCUS cuando se carga un modelo nuevo
         if (!modelLoadedLastFrame && Renderer::HasLoadedModel()) {
             float cx, cy, cz;
             Renderer::GetModelCenter(cx, cy, cz);
             float size = Renderer::GetModelSize();
 
-            // MEJOR CÁLCULO: distancia basada en FOV de 45 grados
-            // Para que el modelo ocupe ~80% de la pantalla
-            float distance = size / (2.0f * std::tan(45.0f * 3.14159f / 180.0f / 2.0f)) * 1.5f;
+            // IMPORTANTE: Informar a la cámara del tamaño de la escena
+            camera->SetSceneSize(size);
+
+            // MEJOR CÁLCULO: distancia para que el modelo ocupe ~60% de la pantalla vertical
+            // Usamos la diagonal del bounding box para mayor seguridad
+            float diagonal = size * std::sqrt(3.0f); // diagonal de un cubo
+            float fovRad = 45.0f * 3.14159f / 180.0f;
+            float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
+
+            // Factor de seguridad: multiplicar por 2.5 para ver el modelo completo cómodamente
+            distance *= 2.5f;  // <--- CAMBIADO de 1.8f a 2.5f
 
             // Asegurar distancia mínima
-            if (distance < 3.0f) distance = 3.0f;
+            if (distance < size * 1.5f) distance = size * 1.5f;  // <--- CAMBIADO de 0.5f a 1.5f
 
             std::cout << "\n*** CAMERA AUTO-FOCUSED ***" << std::endl;
             std::cout << "Model center: (" << cx << ", " << cy << ", " << cz << ")" << std::endl;
             std::cout << "Model size: " << size << std::endl;
+            std::cout << "Model diagonal: " << diagonal << std::endl;
             std::cout << "Camera distance: " << distance << std::endl;
 
             camera->FocusOnPoint(cx, cy, cz, distance);
@@ -79,8 +87,14 @@ void Application::Run() {
             Renderer::GetModelCenter(cx, cy, cz);
             float size = Renderer::GetModelSize();
 
-            float distance = size / (2.0f * std::tan(45.0f * 3.14159f / 180.0f / 2.0f)) * 1.5f;
-            if (distance < 3.0f) distance = 3.0f;
+            camera->SetSceneSize(size);
+
+            float diagonal = size * std::sqrt(3.0f);
+            float fovRad = 45.0f * 3.14159f / 180.0f;
+            float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
+            distance *= 1.8f;
+
+            if (distance < size * 0.5f) distance = size * 0.5f;
 
             camera->FocusOnPoint(cx, cy, cz, distance);
 

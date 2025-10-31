@@ -1,43 +1,72 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\Main.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Application.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Window.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Renderer.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Shader.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Model.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Input.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Time.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Time.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Camera.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\src\core\Texture.cpp">
+    <ClCompile Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\src\core\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\arnaupd2\Documents\GitHub\Motorcin\CMakeLists.txt" />
+    <CustomBuild Include="C:\Users\luisfd1\Documents\GitHub\Motorcin\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{8ACE0533-DE93-3264-BAE7-C56441896480}</UniqueIdentifier>
+      <UniqueIdentifier>{6F373F95-9D21-3794-BD11-CFB53D167433}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\core\Time.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Window.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Application.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Camera.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Input.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Model.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Renderer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Shader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\Texture.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
