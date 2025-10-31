@@ -13,4 +13,6 @@ public:
 private:
     Window* window = nullptr;
     Camera* camera = nullptr;
+
+    bool modelLoadedLastFrame = false; // NUEVO
 };

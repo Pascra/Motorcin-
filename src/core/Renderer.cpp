@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Shader.h"
 #include "Camera.h"
+#include "Texture.h"
 #include <glad/glad.h>
 
 #include <string>
@@ -8,6 +9,7 @@
 #include <iostream>
 #include <cmath>
 #include <limits>
+#include <filesystem>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -20,18 +22,24 @@ unsigned int Renderer::sTriVBO = 0;
 unsigned int Renderer::sRectVAO = 0;
 unsigned int Renderer::sRectVBO = 0;
 unsigned int Renderer::sRectEBO = 0;
+bool Renderer::sWireframeMode = false;
 
 unsigned int Renderer::sModelProgram = 0;
-unsigned int Renderer::sModelVAO = 0;
-unsigned int Renderer::sModelVBO = 0;
-unsigned int Renderer::sModelEBO = 0;
-size_t       Renderer::sModelIndexCount = 0;
+unsigned int Renderer::sModelProgramTextured = 0;
+
+
+float Renderer::sModelCenterX = 0.0f;
+float Renderer::sModelCenterY = 0.0f;
+float Renderer::sModelCenterZ = 0.0f;
+float Renderer::sModelSize = 0.0f;
+
+std::vector<Mesh> Renderer::sMeshes;
+std::vector<Material> Renderer::sMaterials;
 
 int Renderer::sViewportW = 800;
 int Renderer::sViewportH = 600;
 
 static bool sInitialized = false;
-static float sModelScale = 1.0f;
 
 // Shaders
 static const char* kVertexSrc = R"(#version 330 core
@@ -54,8 +62,41 @@ void main(){
 
 static const char* kModelFS = R"(#version 330 core
 out vec4 FragColor;
+uniform vec3 uColor;
 void main(){ 
-    FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    FragColor = vec4(uColor, 1.0);
+}
+)";
+
+static const char* kModelTexturedVS = R"(#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec2 aTexCoord;
+
+out vec2 TexCoord;
+
+uniform mat4 uMVP;
+
+void main(){ 
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    TexCoord = aTexCoord;
+}
+)";
+
+static const char* kModelTexturedFS = R"(#version 330 core
+out vec4 FragColor;
+
+in vec2 TexCoord;
+
+uniform sampler2D uTexture;
+uniform bool uHasTexture;
+uniform vec3 uColor;
+
+void main(){ 
+    if (uHasTexture) {
+        FragColor = texture(uTexture, TexCoord);
+    } else {
+        FragColor = vec4(uColor, 1.0);
+    }
 }
 )";
 
@@ -89,7 +130,6 @@ bool Renderer::Init() {
             return false;
         }
         sProgram = sh.ReleaseProgram();
-        std::cout << "Simple shader program ID: " << sProgram << std::endl;
     }
 
     // VAO/VBO triángulo
@@ -122,7 +162,7 @@ bool Renderer::Init() {
         glBindVertexArray(0);
     }
 
-    // Shader para modelo
+    // Shader para modelo sin textura
     {
         Shader sh;
         if (!sh.CompileFromSource(kModelVS, kModelFS)) {
@@ -130,12 +170,40 @@ bool Renderer::Init() {
             return false;
         }
         sModelProgram = sh.ReleaseProgram();
-        std::cout << "Model shader program ID: " << sModelProgram << std::endl;
+    }
+
+    // Shader para modelo con textura
+    {
+        Shader sh;
+        if (!sh.CompileFromSource(kModelTexturedVS, kModelTexturedFS)) {
+            std::cerr << "Model textured shader compile/link failed\n";
+            return false;
+        }
+        sModelProgramTextured = sh.ReleaseProgram();
     }
 
     sInitialized = true;
     std::cout << "Renderer initialized successfully\n";
     return true;
+}
+
+void Renderer::ClearModelData() {
+    // Eliminar meshes
+    for (auto& mesh : sMeshes) {
+        if (mesh.VAO) glDeleteVertexArrays(1, &mesh.VAO);
+        if (mesh.VBO) glDeleteBuffers(1, &mesh.VBO);
+        if (mesh.EBO) glDeleteBuffers(1, &mesh.EBO);
+    }
+    sMeshes.clear();
+
+    // Eliminar materiales y texturas
+    for (auto& mat : sMaterials) {
+        if (mat.diffuseTexture) {
+            delete mat.diffuseTexture;
+            mat.diffuseTexture = nullptr;
+        }
+    }
+    sMaterials.clear();
 }
 
 void Renderer::Shutdown() {
@@ -147,15 +215,10 @@ void Renderer::Shutdown() {
     if (sRectVBO) glDeleteBuffers(1, &sRectVBO);
     if (sRectEBO) glDeleteBuffers(1, &sRectEBO);
     if (sProgram) glDeleteProgram(sProgram);
-
-    if (sModelVAO) glDeleteVertexArrays(1, &sModelVAO);
-    if (sModelVBO) glDeleteBuffers(1, &sModelVBO);
-    if (sModelEBO) glDeleteBuffers(1, &sModelEBO);
     if (sModelProgram) glDeleteProgram(sModelProgram);
+    if (sModelProgramTextured) glDeleteProgram(sModelProgramTextured);
 
-    sModelVAO = sModelVBO = sModelEBO = 0;
-    sModelProgram = 0;
-    sModelIndexCount = 0;
+    ClearModelData();
 
     sInitialized = false;
 }
@@ -185,7 +248,6 @@ void Renderer::SetViewportSize(int w, int h) {
     sViewportW = w;
     sViewportH = h;
     glViewport(0, 0, w, h);
-    std::cout << "Viewport resized to: " << w << "x" << h << std::endl;
 }
 
 void Renderer::OnFileDropped(const char* path) {
@@ -195,6 +257,9 @@ void Renderer::OnFileDropped(const char* path) {
 }
 
 bool Renderer::LoadModelFromPath(const std::string& path) {
+    // Limpiar modelo anterior
+    ClearModelData();
+
     Assimp::Importer importer;
     unsigned flags = aiProcess_Triangulate
         | aiProcess_JoinIdenticalVertices
@@ -208,24 +273,43 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     }
 
     std::cout << "Scene loaded. Meshes: " << scene->mNumMeshes << std::endl;
+    std::cout << "Materials: " << scene->mNumMaterials << std::endl;
 
-    const aiMesh* mesh = nullptr;
-    for (unsigned i = 0; i < scene->mNumMeshes; ++i) {
-        const aiMesh* m = scene->mMeshes[i];
-        std::cout << "  Mesh " << i << ": " << m->mNumVertices << " vertices, "
-            << m->mNumFaces << " faces" << std::endl;
-        if (m->mPrimitiveTypes & aiPrimitiveType_TRIANGLE) {
-            mesh = m;
-            break;
+    // Obtener directorio del modelo para texturas relativas
+    std::filesystem::path modelPath(path);
+    std::string directory = modelPath.parent_path().string();
+
+    // Cargar materiales
+    for (unsigned int m = 0; m < scene->mNumMaterials; ++m) {
+        const aiMaterial* aiMat = scene->mMaterials[m];
+        Material mat;
+
+        aiColor3D color(0.8f, 0.8f, 0.8f);
+        aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+        mat.color[0] = color.r;
+        mat.color[1] = color.g;
+        mat.color[2] = color.b;
+
+        if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            aiString texPath;
+            if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
+                std::string fullPath = directory + "/" + texPath.C_Str();
+
+                std::cout << "  Loading texture: " << fullPath << std::endl;
+
+                mat.diffuseTexture = new Texture();
+                if (!mat.diffuseTexture->LoadFromFile(fullPath.c_str())) {
+                    std::cerr << "  Failed to load texture, using color instead\n";
+                    delete mat.diffuseTexture;
+                    mat.diffuseTexture = nullptr;
+                }
+            }
         }
+
+        sMaterials.push_back(mat);
     }
 
-    if (!mesh) {
-        std::cerr << "No triangulated mesh found in file.\n";
-        return false;
-    }
-
-    // Calcular bounding box
+    // Calcular bounding box global
     float minX = std::numeric_limits<float>::max();
     float minY = std::numeric_limits<float>::max();
     float minZ = std::numeric_limits<float>::max();
@@ -233,98 +317,141 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     float maxY = std::numeric_limits<float>::lowest();
     float maxZ = std::numeric_limits<float>::lowest();
 
-    for (unsigned v = 0; v < mesh->mNumVertices; ++v) {
-        float x = mesh->mVertices[v].x;
-        float y = mesh->mVertices[v].y;
-        float z = mesh->mVertices[v].z;
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        const aiMesh* mesh = scene->mMeshes[i];
+        for (unsigned v = 0; v < mesh->mNumVertices; ++v) {
+            float x = mesh->mVertices[v].x;
+            float y = mesh->mVertices[v].y;
+            float z = mesh->mVertices[v].z;
 
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        if (z < minZ) minZ = z;
-        if (z > maxZ) maxZ = z;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
+        }
     }
 
-    // Calcular centro del bounding box
     float centerX = (minX + maxX) * 0.5f;
     float centerY = (minY + maxY) * 0.5f;
     float centerZ = (minZ + maxZ) * 0.5f;
-
-    std::cout << "\n*** BOUNDING BOX ***" << std::endl;
-    std::cout << "X: [" << minX << ", " << maxX << "] size: " << (maxX - minX) << std::endl;
-    std::cout << "Y: [" << minY << ", " << maxY << "] size: " << (maxY - minY) << std::endl;
-    std::cout << "Z: [" << minZ << ", " << maxZ << "] size: " << (maxZ - minZ) << std::endl;
-    std::cout << "Center: (" << centerX << ", " << centerY << ", " << centerZ << ")" << std::endl;
 
     float sizeX = maxX - minX;
     float sizeY = maxY - minY;
     float sizeZ = maxZ - minZ;
     float maxSize = std::max({ sizeX, sizeY, sizeZ });
 
-    sModelScale = 2.0f / maxSize;
+    // GUARDAR INFO DEL MODELO
+    sModelCenterX = centerX;
+    sModelCenterY = centerY;
+    sModelCenterZ = centerZ;
+    sModelSize = maxSize;
 
-    std::cout << "Auto scale: " << sModelScale << std::endl;
+    std::cout << "\n*** BOUNDING BOX ***" << std::endl;
+    std::cout << "Center: (" << centerX << ", " << centerY << ", " << centerZ << ")" << std::endl;
+    std::cout << "Size: " << maxSize << std::endl;
 
-    // CENTRAR EL MODELO
-    std::vector<float> positions;
-    positions.reserve(mesh->mNumVertices * 3);
+    // Procesar meshes
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        const aiMesh* aiMesh = scene->mMeshes[i];
 
-    for (unsigned v = 0; v < mesh->mNumVertices; ++v) {
-        positions.push_back(mesh->mVertices[v].x - centerX);
-        positions.push_back(mesh->mVertices[v].y - centerY);
-        positions.push_back(mesh->mVertices[v].z - centerZ);
-    }
-
-    std::vector<unsigned> indices;
-    indices.reserve(mesh->mNumFaces * 3);
-    for (unsigned f = 0; f < mesh->mNumFaces; ++f) {
-        const aiFace& face = mesh->mFaces[f];
-        if (face.mNumIndices == 3) {
-            indices.push_back(face.mIndices[0]);
-            indices.push_back(face.mIndices[1]);
-            indices.push_back(face.mIndices[2]);
+        if (!(aiMesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)) {
+            continue;
         }
+
+        std::cout << "Processing mesh " << i << ": " << aiMesh->mNumVertices << " vertices" << std::endl;
+
+        std::vector<float> vertexData;
+        bool hasUVs = aiMesh->HasTextureCoords(0);
+        int stride = hasUVs ? 5 : 3;
+
+        vertexData.reserve(aiMesh->mNumVertices * stride);
+
+        for (unsigned v = 0; v < aiMesh->mNumVertices; ++v) {
+            // Posición (centrada)
+            vertexData.push_back(aiMesh->mVertices[v].x - centerX);
+            vertexData.push_back(aiMesh->mVertices[v].y - centerY);
+            vertexData.push_back(aiMesh->mVertices[v].z - centerZ);
+
+            if (hasUVs) {
+                vertexData.push_back(aiMesh->mTextureCoords[0][v].x);
+                vertexData.push_back(aiMesh->mTextureCoords[0][v].y);
+            }
+        }
+
+        std::vector<unsigned> indices;
+        indices.reserve(aiMesh->mNumFaces * 3);
+        for (unsigned f = 0; f < aiMesh->mNumFaces; ++f) {
+            const aiFace& face = aiMesh->mFaces[f];
+            if (face.mNumIndices == 3) {
+                indices.push_back(face.mIndices[0]);
+                indices.push_back(face.mIndices[1]);
+                indices.push_back(face.mIndices[2]);
+            }
+        }
+
+        Mesh mesh;
+        glGenVertexArrays(1, &mesh.VAO);
+        glGenBuffers(1, &mesh.VBO);
+        glGenBuffers(1, &mesh.EBO);
+
+        glBindVertexArray(mesh.VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned), indices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        if (hasUVs) {
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)(3 * sizeof(float)));
+            glEnableVertexAttribArray(1);
+        }
+
+        glBindVertexArray(0);
+
+        mesh.indexCount = indices.size();
+        mesh.materialIndex = aiMesh->mMaterialIndex;
+
+        sMeshes.push_back(mesh);
+
+        std::cout << "  Mesh created. Indices: " << mesh.indexCount
+            << ", Material: " << mesh.materialIndex
+            << ", Has UVs: " << (hasUVs ? "YES" : "NO") << std::endl;
     }
 
-    if (!sModelVAO) glGenVertexArrays(1, &sModelVAO);
-    if (!sModelVBO) glGenBuffers(1, &sModelVBO);
-    if (!sModelEBO) glGenBuffers(1, &sModelEBO);
-
-    glBindVertexArray(sModelVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, sModelVBO);
-    glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(float), positions.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sModelEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned), indices.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindVertexArray(0);
-
-    sModelIndexCount = indices.size();
-
-    std::cout << "Model CENTERED and loaded successfully!" << std::endl;
-    std::cout << "  VAO: " << sModelVAO << std::endl;
-    std::cout << "  VBO: " << sModelVBO << std::endl;
-    std::cout << "  EBO: " << sModelEBO << std::endl;
-    std::cout << "  Vertices: " << positions.size() / 3 << std::endl;
-    std::cout << "  Indices: " << sModelIndexCount << std::endl;
-    std::cout << "*********************\n" << std::endl;
-
+    std::cout << "Model loaded successfully! Total meshes: " << sMeshes.size() << std::endl;
     return true;
 }
 
+void Renderer::GetModelCenter(float& x, float& y, float& z) {
+    x = sModelCenterX;
+    y = sModelCenterY;
+    z = sModelCenterZ;
+}
+
+float Renderer::GetModelSize() {
+    return sModelSize;
+}
+
 void Renderer::DrawLoadedModel(Camera* camera) {
-    if (!sModelVAO || sModelIndexCount == 0 || !camera) {
+    if (sMeshes.empty() || !camera) {
         return;
     }
 
-    glUseProgram(sModelProgram);
+    static int drawCallCount = 0;
+    bool shouldDebug = (drawCallCount < 5 || drawCallCount % 60 == 0) && drawCallCount < 300;
 
-    // Obtener matrices de la cámara
+    if (shouldDebug) {
+        std::cout << "\n=== DRAW CALL #" << drawCallCount << " ===" << std::endl;
+        std::cout << "Meshes to draw: " << sMeshes.size() << std::endl;
+    }
+
+    // Calcular MVP
     float P[16], V[16], PV[16], M[16], MVP[16];
 
     float aspect = 1.0f;
@@ -334,26 +461,117 @@ void Renderer::DrawLoadedModel(Camera* camera) {
 
     camera->GetProjectionMatrix(P, aspect);
     camera->GetViewMatrix(V);
-
-    // Matriz modelo (identidad)
     MatIdentity(M);
 
-    // MVP = P * V * M
     MatMul(PV, P, V);
     MatMul(MVP, PV, M);
 
-    int loc = glGetUniformLocation(sModelProgram, "uMVP");
-    if (loc != -1) {
-        glUniformMatrix4fv(loc, 1, GL_FALSE, MVP);
+    if (shouldDebug) {
+        std::cout << "MVP matrix first values: " << MVP[0] << ", " << MVP[1] << ", " << MVP[2] << std::endl;
     }
 
-    // Dibujar wireframe
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDisable(GL_CULL_FACE);
+    // Configurar modo de renderizado
+    if (sWireframeMode) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glLineWidth(2.0f);
+        glDisable(GL_CULL_FACE);
+    }
+    else {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glLineWidth(1.0f);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+    }
 
-    glBindVertexArray(sModelVAO);
-    glDrawElements(GL_TRIANGLES, (GLsizei)sModelIndexCount, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    // Dibujar cada mesh
+    for (size_t i = 0; i < sMeshes.size(); ++i) {
+        const Mesh& mesh = sMeshes[i];
 
+        if (shouldDebug && i == 0) {
+            std::cout << "Drawing mesh 0:" << std::endl;
+            std::cout << "  VAO: " << mesh.VAO << std::endl;
+            std::cout << "  IndexCount: " << mesh.indexCount << std::endl;
+            std::cout << "  MaterialIndex: " << mesh.materialIndex << std::endl;
+        }
+
+        const Material* mat = nullptr;
+        if (mesh.materialIndex >= 0 && mesh.materialIndex < (int)sMaterials.size()) {
+            mat = &sMaterials[mesh.materialIndex];
+        }
+
+        bool hasTexture = mat && mat->diffuseTexture && mat->diffuseTexture->IsValid();
+        unsigned int program = hasTexture ? sModelProgramTextured : sModelProgram;
+
+        if (shouldDebug && i == 0) {
+            std::cout << "  Using program: " << program << std::endl;
+            std::cout << "  Has texture: " << (hasTexture ? "YES" : "NO") << std::endl;
+            std::cout << "  Wireframe mode: " << (sWireframeMode ? "ON" : "OFF") << std::endl;
+        }
+
+        glUseProgram(program);
+
+        // Set MVP
+        int locMVP = glGetUniformLocation(program, "uMVP");
+        if (locMVP != -1) {
+            glUniformMatrix4fv(locMVP, 1, GL_FALSE, MVP);
+        }
+        else if (shouldDebug && i == 0) {
+            std::cerr << "  WARNING: uMVP uniform not found!" << std::endl;
+        }
+
+        // Set material
+        if (hasTexture) {
+            mat->diffuseTexture->Bind(0);
+            int locTex = glGetUniformLocation(program, "uTexture");
+            if (locTex != -1) glUniform1i(locTex, 0);
+
+            int locHasTex = glGetUniformLocation(program, "uHasTexture");
+            if (locHasTex != -1) glUniform1i(locHasTex, 1);
+        }
+        else {
+            int locHasTex = glGetUniformLocation(program, "uHasTexture");
+            if (locHasTex != -1) glUniform1i(locHasTex, 0);
+        }
+
+        // Set color
+        int locColor = glGetUniformLocation(program, "uColor");
+        if (locColor != -1) {
+            if (sWireframeMode) {
+                // Color brillante para wireframe
+                float wireColor[3] = { 0.0f, 1.0f, 0.0f };
+                glUniform3fv(locColor, 1, wireColor);
+            }
+            else if (mat) {
+                glUniform3fv(locColor, 1, mat->color);
+            }
+            else {
+                float defaultColor[3] = { 0.8f, 0.8f, 0.8f };
+                glUniform3fv(locColor, 1, defaultColor);
+            }
+        }
+
+        // Dibujar
+        glBindVertexArray(mesh.VAO);
+        glDrawElements(GL_TRIANGLES, (GLsizei)mesh.indexCount, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+
+        if (hasTexture) {
+            mat->diffuseTexture->Unbind();
+        }
+
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR && shouldDebug && i == 0) {
+            std::cerr << "  OpenGL Error: " << err << std::endl;
+        }
+    }
+
+    // Restaurar estado
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glLineWidth(1.0f);
+
+    drawCallCount++;
+}
+void Renderer::ToggleWireframe() {
+    sWireframeMode = !sWireframeMode;
+    std::cout << "Wireframe mode: " << (sWireframeMode ? "ON" : "OFF") << std::endl;
 }

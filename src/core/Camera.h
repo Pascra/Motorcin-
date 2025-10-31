@@ -16,10 +16,14 @@ public:
     // Getters
     void GetPosition(float& x, float& y, float& z) const;
 
+    // NUEVO: Focus en un punto
+    void FocusOnPoint(float x, float y, float z, float distance);
+    void LookAt(float x, float y, float z);
+
 private:
     float mPosX, mPosY, mPosZ;
-    float mYaw;   // Rotación horizontal (grados)
-    float mPitch; // Rotación vertical (grados)
+    float mYaw;
+    float mPitch;
     float mSpeed;
     float mSensitivity;
     float mFOV;

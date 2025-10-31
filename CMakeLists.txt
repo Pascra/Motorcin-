@@ -11,6 +11,9 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 
+# STB_IMAGE (header-only)
+# Descarga stb_image.h y colócalo en: src/external/stb_image.h
+
 add_executable(Motorcin
   src/Main.cpp
   src/core/Application.cpp
@@ -21,9 +24,13 @@ add_executable(Motorcin
   src/core/Input.cpp
   src/core/Time.cpp
   src/core/Camera.cpp
+  src/core/Texture.cpp
 )
 
-target_include_directories(Motorcin PRIVATE src)
+target_include_directories(Motorcin PRIVATE 
+  src
+  src/external
+)
 
 if (MSVC)
   target_compile_options(Motorcin PRIVATE /MP)
