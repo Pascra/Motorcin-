@@ -1,6 +1,6 @@
-^C:\USERS\LUISFD1\DOCUMENTS\GITHUB\MOTORCIN\BUILD\CMAKEFILES\E72557B82FC32133BCB5971466178415\GENERATE.STAMP.RULE
+^C:\USERS\CASA\DESKTOP\MOTORCIN-\BUILD\CMAKEFILES\773586D517436333973529918925EB52\GENERATE.STAMP.RULE
 setlocal
-C:\Users\luisfd1\Desktop\CMake\bin\cmake.exe -SC:/Users/luisfd1/Documents/GitHub/Motorcin -BC:/Users/luisfd1/Documents/GitHub/Motorcin/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/luisfd1/Documents/GitHub/Motorcin/build/Motorcin.sln
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/Casa/Desktop/Motorcin- -BC:/Users/Casa/Desktop/Motorcin-/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Casa/Desktop/Motorcin-/build/Motorcin.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

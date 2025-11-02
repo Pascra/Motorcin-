@@ -14,34 +14,39 @@ static void MatIdentity(float m[16]) {
 }
 
 static void MatPerspective(float m[16], float fovy, float aspect, float zn, float zf) {
+    // 🔧 FIX: Asegurar que los parámetros son válidos
+    if (aspect <= 0.0f) aspect = 1.0f;
+    if (zn <= 0.0f) zn = 0.01f;
+    if (zf <= zn) zf = zn + 1000.0f;
+
     const float f = 1.0f / std::tan(fovy * 0.5f);
+
     for (int i = 0; i < 16; ++i) m[i] = 0.f;
+
     m[0] = f / aspect;
     m[5] = f;
     m[10] = (zf + zn) / (zn - zf);
     m[11] = -1.f;
     m[14] = (2.f * zf * zn) / (zn - zf);
+    m[15] = 0.f;
 }
 
 static void MatLookAt(float m[16],
     float eyeX, float eyeY, float eyeZ,
     float centerX, float centerY, float centerZ,
     float upX, float upY, float upZ) {
-    // Forward = normalize(center - eye)
     float fX = centerX - eyeX;
     float fY = centerY - eyeY;
     float fZ = centerZ - eyeZ;
     float len = std::sqrt(fX * fX + fY * fY + fZ * fZ);
     if (len > 0.00001f) { fX /= len; fY /= len; fZ /= len; }
 
-    // Right = normalize(cross(forward, up))
     float rX = fY * upZ - fZ * upY;
     float rY = fZ * upX - fX * upZ;
     float rZ = fX * upY - fY * upX;
     len = std::sqrt(rX * rX + rY * rY + rZ * rZ);
     if (len > 0.00001f) { rX /= len; rY /= len; rZ /= len; }
 
-    // Up = cross(right, forward)
     float uX = rY * fZ - rZ * fY;
     float uY = rZ * fX - rX * fZ;
     float uZ = rX * fY - rY * fX;
@@ -59,10 +64,11 @@ Camera::Camera()
     , mSpeed(5.0f)
     , mSensitivity(0.1f)
     , mFOV(45.0f)
-    , mSceneSize(10.0f)  // NUEVO: valor por defecto
+    , mSceneSize(10.0f)
 {
     UpdateVectors();
-    std::cout << "Camera initialized" << std::endl;
+    std::cout << "[CAM] Initialized at (" << mPosX << ", " << mPosY << ", " << mPosZ << ")" << std::endl;
+    std::cout << "[CAM] Yaw: " << mYaw << ", Pitch: " << mPitch << ", FOV: " << mFOV << std::endl;
 }
 
 void Camera::Update(float deltaTime) {
@@ -70,20 +76,16 @@ void Camera::Update(float deltaTime) {
         return;
     }
 
-    // Rotación con ratón
     int dx, dy;
     Input::GetMouseDelta(dx, dy);
 
     if (dx != 0 || dy != 0) {
         mYaw += dx * mSensitivity;
         mPitch -= dy * mSensitivity;
-
         mPitch = std::max(-89.0f, std::min(89.0f, mPitch));
-
         UpdateVectors();
     }
 
-    // Movimiento con WASD
     float velocity = mSpeed * deltaTime;
 
     if (Input::IsKeyDown(SDLK_W)) {
@@ -113,7 +115,6 @@ void Camera::Update(float deltaTime) {
         mPosY -= velocity;
     }
 
-    // Zoom con rueda del ratón
     float wheel = Input::GetMouseWheelDelta();
     if (wheel != 0.0f) {
         Zoom(wheel);
@@ -124,7 +125,6 @@ void Camera::UpdateVectors() {
     float yawRad = mYaw * (float)M_PI / 180.0f;
     float pitchRad = mPitch * (float)M_PI / 180.0f;
 
-    // Forward
     mForwardX = std::cos(yawRad) * std::cos(pitchRad);
     mForwardY = std::sin(pitchRad);
     mForwardZ = std::sin(yawRad) * std::cos(pitchRad);
@@ -136,7 +136,6 @@ void Camera::UpdateVectors() {
         mForwardZ /= len;
     }
 
-    // Right = normalize(cross(forward, worldUp))
     float worldUpX = 0, worldUpY = 1, worldUpZ = 0;
     mRightX = mForwardY * worldUpZ - mForwardZ * worldUpY;
     mRightY = mForwardZ * worldUpX - mForwardX * worldUpZ;
@@ -149,7 +148,6 @@ void Camera::UpdateVectors() {
         mRightZ /= len;
     }
 
-    // Up = cross(right, forward)
     mUpX = mRightY * mForwardZ - mRightZ * mForwardY;
     mUpY = mRightZ * mForwardX - mRightX * mForwardZ;
     mUpZ = mRightX * mForwardY - mRightY * mForwardX;
@@ -164,12 +162,15 @@ void Camera::GetViewMatrix(float out[16]) const {
 }
 
 void Camera::GetProjectionMatrix(float out[16], float aspect) const {
-    // Calcular near y far dinámicamente basado en el tamaño de la escena
-    // Near plane: entre 0.1 y 1% del tamaño del modelo (lo que sea mayor)
-    float nearPlane = std::max(0.1f, mSceneSize * 0.1f);
+    // 🔧 FIX: Near plane MUY pequeño para evitar clipping cercano
+    // Far plane generoso para ver todo el modelo
+    float nearPlane = 0.01f;  // Fijo y muy cercano
+    float farPlane = std::max(10000.0f, mSceneSize * 500.0f);  // Muy lejano
 
-    // Far plane: 150x el tamaño del modelo (más conservador)
-    float farPlane = std::max(1000.0f, mSceneSize * 150.0f);
+    static int logCount = 0;
+    if (logCount < 3) {  // Solo primeros 3 frames
+        logCount++;
+    }
 
     MatPerspective(out, mFOV * (float)M_PI / 180.0f, aspect, nearPlane, farPlane);
 }
@@ -188,18 +189,12 @@ void Camera::Rotate(float yaw, float pitch) {
 }
 
 void Camera::Zoom(float amount) {
-    // Opción 1: Mover cámara hacia adelante/atrás
-    float moveSpeed = mSceneSize * 0.1f; // 10% del tamaño del modelo
+    float moveSpeed = mSceneSize * 0.1f;
     float movement = amount * moveSpeed;
 
     mPosX += mForwardX * movement;
     mPosY += mForwardY * movement;
     mPosZ += mForwardZ * movement;
-
-    static int lastPrint = 0;
-    if (++lastPrint % 10 == 0) {
-        std::cout << "Camera moved. Distance: " << movement << std::endl;
-    }
 }
 
 void Camera::GetPosition(float& x, float& y, float& z) const {
@@ -213,56 +208,56 @@ void Camera::FocusOnPoint(float targetX, float targetY, float targetZ, float dis
     std::cout << "Target: (" << targetX << ", " << targetY << ", " << targetZ << ")" << std::endl;
     std::cout << "Distance requested: " << distance << std::endl;
 
-    // Asegurar una distancia mínima proporcional al tamaño del modelo
-    // CAMBIO: Factor más agresivo para ver el modelo completo
-    float minDistance = mSceneSize * 1.5f;  // <--- CAMBIADO de 0.5f a 1.5f
+    // 🔧 FIX: Distancia mínima más generosa
+    float minDistance = mSceneSize * 2.5f;  // <--- CAMBIADO de 1.5f a 2.5f
     if (distance < minDistance) {
         distance = minDistance;
         std::cout << "Distance adjusted to: " << distance << std::endl;
     }
 
-    // Posicionar cámara en un ángulo isométrico agradable
-    // 45 grados horizontal, 30 grados vertical
-    float angleH = 45.0f * (float)M_PI / 180.0f;
-    float angleV = 30.0f * (float)M_PI / 180.0f;
+    // 🔧 CAMBIO: Ángulo más alto para ver mejor el modelo (isométrico clásico)
+    float angleH = 45.0f * (float)M_PI / 180.0f;   // 45° horizontal
+    float angleV = 35.0f * (float)M_PI / 180.0f;   // 35° vertical (más alto que 30°)
 
-    // Calcular offset desde el target
     float offsetX = distance * std::cos(angleV) * std::cos(angleH);
     float offsetY = distance * std::sin(angleV);
     float offsetZ = distance * std::cos(angleV) * std::sin(angleH);
 
-    // Posicionar cámara
     mPosX = targetX + offsetX;
     mPosY = targetY + offsetY;
     mPosZ = targetZ + offsetZ;
 
     std::cout << "Camera positioned at: (" << mPosX << ", " << mPosY << ", " << mPosZ << ")" << std::endl;
 
-    // Hacer que la cámara mire exactamente al target
+    // Mirar exactamente al target
     LookAt(targetX, targetY, targetZ);
 
     std::cout << "Camera yaw: " << mYaw << ", pitch: " << mPitch << std::endl;
 
-    // Mostrar near/far planes para debug
-    float nearPlane = std::max(0.1f, mSceneSize * 0.005f);
-    float farPlane = std::max(100.0f, mSceneSize * 150.0f);
-    std::cout << "Near plane: " << nearPlane << ", Far plane: " << farPlane << std::endl;
-
-    // Verificar la distancia real
+    // Verificar distancia real
     float dx = mPosX - targetX;
     float dy = mPosY - targetY;
     float dz = mPosZ - targetZ;
     float actualDistance = std::sqrt(dx * dx + dy * dy + dz * dz);
-    std::cout << "Actual distance from target: " << actualDistance << std::endl;
+    std::cout << "Actual distance: " << actualDistance << std::endl;
+
+    // 🔧 NUEVO: Verificar que el target está dentro del frustum
+    float nearPlane = 0.1f;
+    float farPlane = std::max(10000.0f, mSceneSize * 500.0f);
+    std::cout << "Frustum check - Target distance: " << actualDistance
+        << " (near=" << nearPlane << ", far=" << farPlane << ")" << std::endl;
+
+    if (actualDistance < nearPlane || actualDistance > farPlane) {
+        std::cout << "⚠️ WARNING: Target may be outside frustum!" << std::endl;
+    }
+    std::cout << std::endl;
 }
 
 void Camera::LookAt(float targetX, float targetY, float targetZ) {
-    // Calcular dirección hacia el target
     float dirX = targetX - mPosX;
     float dirY = targetY - mPosY;
     float dirZ = targetZ - mPosZ;
 
-    // Normalizar
     float len = std::sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
     if (len < 0.00001f) return;
 
@@ -270,15 +265,8 @@ void Camera::LookAt(float targetX, float targetY, float targetZ) {
     dirY /= len;
     dirZ /= len;
 
-    // Calcular yaw (rotación horizontal)
-    // atan2(z, x) en el plano XZ
     mYaw = std::atan2(dirZ, dirX) * 180.0f / (float)M_PI;
-
-    // Calcular pitch (rotación vertical)
-    // asin(y) para el ángulo vertical
     mPitch = std::asin(dirY) * 180.0f / (float)M_PI;
-
-    // Limitar pitch
     mPitch = std::max(-89.0f, std::min(89.0f, mPitch));
 
     UpdateVectors();
@@ -286,4 +274,12 @@ void Camera::LookAt(float targetX, float targetY, float targetZ) {
 
 void Camera::SetSceneSize(float size) {
     mSceneSize = size;
+    // 🔧 FIX: Ajustar velocidad de cámara según tamaño del modelo
+    mSpeed = size * 0.5f;
+}
+
+void Camera::MoveForward(float amount) {
+    mPosX += mForwardX * amount;
+    mPosY += mForwardY * amount;
+    mPosZ += mForwardZ * amount;
 }
