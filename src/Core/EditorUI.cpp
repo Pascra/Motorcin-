@@ -1,13 +1,19 @@
-﻿#include "EditorUI.h"
+﻿// EditorUI.cpp (DEFINITIVO) — con Project Assets + Delete (PASO 5.2 incluido)
+
+#include "EditorUI.h"
 #include "SceneManager.h"
 #include "GameObject.h"
 #include "PlayModeManager.h"
 #include "Rendering/Texture.h"
+#include "AssetDatabase.h"
+
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
+
 #include <iostream>
 #include <cstring>
+#include <filesystem>
 
 // Static member initialization
 bool EditorUI::sShowHierarchy = true;
@@ -16,7 +22,10 @@ bool EditorUI::sShowResources = true;
 bool EditorUI::sShouldExit = false;
 GameObject* EditorUI::sDraggedObject = nullptr;
 std::string EditorUI::sNewObjectName = "New GameObject";
-
+static std::string sSelectedAssetGuid;
+static bool sPendingDeleteAsset = false;
+static bool sPendingForceDeleteAsset = false;
+static std::string sPendingDeleteGuid;
 void EditorUI::Init() {
     std::cout << "[EditorUI] Initialized" << std::endl;
 }
@@ -95,7 +104,6 @@ void EditorUI::DrawMainMenuBar() {
                     SceneManager::DestroyGameObject(selected);
                 }
                 if (ImGui::MenuItem("Duplicate Selected", "Ctrl+D")) {
-                    // TODO: Implement duplication
                     std::cout << "Duplicate not yet implemented" << std::endl;
                 }
             }
@@ -190,7 +198,6 @@ void EditorUI::DrawGameObjectNode(GameObject* obj) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT")) {
             GameObject* draggedObj = *(GameObject**)payload->Data;
             if (draggedObj != obj && draggedObj->GetParent() != obj) {
-                // Avoid circular dependency
                 bool isDescendant = false;
                 GameObject* check = obj;
                 while (check) {
@@ -225,7 +232,6 @@ void EditorUI::DrawHierarchy() {
 
     ImGui::Begin("Hierarchy", &sShowHierarchy);
 
-    // Create new GameObject button
     if (ImGui::Button("+ Create GameObject", ImVec2(-1, 0))) {
         GameObject* obj = SceneManager::CreateGameObject(sNewObjectName);
         SceneManager::SetSelectedObject(obj);
@@ -233,24 +239,20 @@ void EditorUI::DrawHierarchy() {
 
     ImGui::Separator();
 
-    // Handle Delete key
     GameObject* selected = SceneManager::GetSelectedObject();
     if (selected && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Delete)) {
         SceneManager::DestroyGameObject(selected);
         selected = nullptr;
     }
 
-    // Draw root objects
     for (GameObject* obj : SceneManager::GetRootObjects()) {
         DrawGameObjectNode(obj);
     }
 
-    // Empty space click to deselect
     if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
         SceneManager::SetSelectedObject(nullptr);
     }
 
-    // Empty space drop target (make root)
     if (ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT")) {
             GameObject* draggedObj = *(GameObject**)payload->Data;
@@ -264,12 +266,10 @@ void EditorUI::DrawHierarchy() {
 }
 
 void EditorUI::DrawComponentInspector(GameObject* obj) {
-    // Transform (always present)
     if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
         obj->GetTransform()->OnInspectorGUI();
     }
 
-    // Other components
     for (Component* comp : obj->GetComponents()) {
         std::string header = std::string(comp->GetTypeName());
 
@@ -279,7 +279,7 @@ void EditorUI::DrawComponentInspector(GameObject* obj) {
             ImGui::Spacing();
             if (ImGui::Button(("Remove##" + header).c_str())) {
                 obj->RemoveComponent(comp);
-                break; // Exit loop as we modified the list
+                break;
             }
         }
     }
@@ -293,7 +293,6 @@ void EditorUI::DrawInspector() {
     GameObject* selected = SceneManager::GetSelectedObject();
 
     if (selected) {
-        // Si está en modo Play, mostrar advertencia
         bool isPlaying = PlayModeManager::IsPlaying();
         if (isPlaying) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
@@ -302,14 +301,12 @@ void EditorUI::DrawInspector() {
             ImGui::Separator();
         }
 
-        // Header with ID
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
         ImGui::Text("ID: %u", selected->GetID());
         ImGui::PopStyleColor();
 
         ImGui::Separator();
 
-        // Name
         char nameBuf[256];
         strncpy(nameBuf, selected->GetName().c_str(), sizeof(nameBuf) - 1);
         nameBuf[sizeof(nameBuf) - 1] = '\0';
@@ -320,7 +317,6 @@ void EditorUI::DrawInspector() {
         }
         ImGui::PopItemWidth();
 
-        // Active checkbox
         bool active = selected->IsActive();
         if (ImGui::Checkbox("Active", &active)) {
             selected->SetActive(active);
@@ -329,14 +325,12 @@ void EditorUI::DrawInspector() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // Components
         DrawComponentInspector(selected);
 
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
-        // Add component button (centered)
         float buttonWidth = 200.0f;
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - buttonWidth) * 0.5f);
 
@@ -344,7 +338,6 @@ void EditorUI::DrawInspector() {
             ImGui::OpenPopup("AddComponentPopup");
         }
 
-        // Add Component Popup
         if (ImGui::BeginPopup("AddComponentPopup")) {
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "Add Component");
             ImGui::Separator();
@@ -381,91 +374,109 @@ void EditorUI::DrawResourceBrowser() {
 
     ImGui::Begin("Resources", &sShowResources);
 
-    // Meshes section
-    if (ImGui::CollapsingHeader("Meshes", ImGuiTreeNodeFlags_DefaultOpen)) {
-        const auto& meshes = SceneManager::GetMeshList();
+    // ============================================================
+    // ✅ PASO 5.2 — Project Assets (AssetDatabase) + Delete
+    // ============================================================
+    if (ImGui::CollapsingHeader("Project Assets", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-        if (meshes.empty()) {
-            ImGui::TextDisabled("  No meshes loaded");
+        // ⚠️ Estas estáticas deben vivir fuera del for (y el delete fuera del for)
+        static bool sPendingDelete = false;
+        static bool sPendingForceDelete = false;
+        static std::string sPendingGuid;
+        static std::string sSelectedGuid;
+
+        const auto& all = AssetDatabase::GetAll();
+
+        if (all.empty()) {
+            ImGui::TextDisabled("  No assets imported yet.");
+            ImGui::TextDisabled("  Tip: Drag & drop FBX/PNG into the window to import.");
+
+            // si no hay assets, no puede haber selección válida
+            sSelectedGuid.clear();
         }
         else {
             ImGui::Indent();
-            for (const auto& mesh : meshes) {
-                ImGui::PushID(mesh.second);
 
-                // Icon + name
-                ImGui::Text("[M]"); // Mesh icon
+            for (const auto& kv : all) {
+                const AssetRecord& rec = kv.second;
+
+                // Seguridad por si llega un record raro
+                if (rec.guid.empty()) continue;
+
+                ImGui::PushID(rec.guid.c_str());
+
+                const char* icon = "[A]";
+                if (rec.type == AssetType::Model) icon = "[FBX]";
+                else if (rec.type == AssetType::Texture) icon = "[TEX]";
+
+                std::string filename = rec.sourcePath;
+                try { filename = std::filesystem::path(rec.sourcePath).filename().string(); }
+                catch (...) {}
+
+                ImGui::Text("%s", icon);
                 ImGui::SameLine();
-                ImGui::Selectable(mesh.first.c_str());
 
-                // Drag source
-                if (ImGui::BeginDragDropSource()) {
-                    int index = mesh.second;
-                    ImGui::SetDragDropPayload("MESH", &index, sizeof(int));
-                    ImGui::Text("Mesh: %s (Index: %d)", mesh.first.c_str(), index);
-                    ImGui::EndDragDropSource();
+                bool isSelected = (sSelectedGuid == rec.guid);
+                if (ImGui::Selectable(filename.c_str(), isSelected)) {
+                    sSelectedGuid = rec.guid;
                 }
 
-                // Tooltip with details
+                // Tooltip
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
-                    ImGui::Text("Mesh Index: %d", mesh.second);
-                    ImGui::Text("Drag onto MeshRenderer to assign");
+                    ImGui::Text("Path: %s", rec.sourcePath.c_str());
+                    ImGui::Text("GUID: %s", rec.guid.c_str());
+                    ImGui::Text("Library: %s", rec.libraryDir.c_str());
+                    ImGui::TextDisabled("Right click for options");
                     ImGui::EndTooltip();
+                }
+
+                // Context menu
+                if (ImGui::BeginPopupContextItem()) {
+                    ImGui::TextDisabled("GUID: %s", rec.guid.c_str());
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Delete")) {
+                        ImGui::CloseCurrentPopup();          // ✅ cerrar popup
+                        sPendingDelete = true;              // ✅ marcar delete
+                        sPendingForceDelete = false;
+                        sPendingGuid = rec.guid;
+                    }
+
+                    if (ImGui::MenuItem("Force Delete")) {
+                        ImGui::CloseCurrentPopup();
+                        sPendingDelete = true;
+                        sPendingForceDelete = true;
+                        sPendingGuid = rec.guid;
+                    }
+
+                    ImGui::EndPopup();
                 }
 
                 ImGui::PopID();
             }
+
             ImGui::Unindent();
         }
-    }
 
-    ImGui::Spacing();
+        // ✅ Ejecutar delete FUERA del bucle (clave para no crashear)
+        if (sPendingDelete) {
+            const std::string guidToDelete = sPendingGuid;   // copia local segura
+            const bool force = sPendingForceDelete;
 
-    // Textures section
-    if (ImGui::CollapsingHeader("Textures", ImGuiTreeNodeFlags_DefaultOpen)) {
-        const auto& textures = SceneManager::GetTextureList();
+            sPendingDelete = false;
+            sPendingForceDelete = false;
+            sPendingGuid.clear();
 
-        if (textures.empty()) {
-            ImGui::TextDisabled("  No textures loaded");
-        }
-        else {
-            ImGui::Indent();
-            for (const auto& tex : textures) {
-                ImGui::PushID(tex.second);
+            if (!guidToDelete.empty()) {
+                std::cout << "[EditorUI] Request delete guid=" << guidToDelete << "\n";
+                AssetDatabase::DeleteAsset(guidToDelete, force);
 
-                // Icon + name
-                ImGui::Text("[T]"); // Texture icon
-                ImGui::SameLine();
-                ImGui::Selectable(tex.first.c_str());
-
-                // Drag source
-                if (ImGui::BeginDragDropSource()) {
-                    Texture* ptr = tex.second;
-                    ImGui::SetDragDropPayload("TEXTURE", &ptr, sizeof(Texture*));
-                    ImGui::Text("Texture: %s", tex.first.c_str());
-                    if (tex.second && tex.second->IsValid()) {
-                        ImGui::Text("ID: %u", tex.second->GetID());
-                    }
-                    ImGui::EndDragDropSource();
+                // si borraste el seleccionado, limpia selección
+                if (sSelectedGuid == guidToDelete) {
+                    sSelectedGuid.clear();
                 }
-
-                // Tooltip with details
-                if (ImGui::IsItemHovered()) {
-                    ImGui::BeginTooltip();
-                    if (tex.second && tex.second->IsValid()) {
-                        ImGui::Text("Texture ID: %u", tex.second->GetID());
-                    }
-                    else {
-                        ImGui::Text("Invalid texture");
-                    }
-                    ImGui::Text("Drag onto MeshRenderer to assign");
-                    ImGui::EndTooltip();
-                }
-
-                ImGui::PopID();
             }
-            ImGui::Unindent();
         }
     }
 
@@ -479,8 +490,7 @@ void EditorUI::HandleDragDrop() {
     MeshRenderer* renderer = selected->GetComponent<MeshRenderer>();
     if (!renderer) return;
 
-    // This would be called in the inspector or viewport
-    // to handle dropping meshes/textures onto the MeshRenderer
+    // Placeholder
 }
 
 bool EditorUI::IsWindowHovered() {
@@ -558,7 +568,6 @@ void EditorUI::DrawPlayControls() {
     }
     ImGui::PopStyleColor(3);
 
-    // Status text
     ImGui::Spacing();
     const char* statusText = "";
     ImVec4 statusColor;

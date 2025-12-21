@@ -12,6 +12,8 @@
 #include <iostream>
 #include <cmath>
 #include <filesystem>
+#include "AssetDatabase.h"
+
 
 Application::Application() {
     window = new Window("Motorcin Engine", 1280, 720);
@@ -53,6 +55,8 @@ void Application::Run() {
     Input::Init();
     Time::Init();
     SceneManager::Init();
+    AssetDatabase::Init();
+
     PlayModeManager::Init();
     EditorUI::Init();
 
@@ -182,6 +186,16 @@ void Application::Run() {
 
         Input::Update();
         window->PollEvents();
+        // Cambiar color de fondo con teclas numéricas (fila superior)
+        if (Input::IsKeyPressed(SDLK_1)) { mClearColor[0] = 1.0f; mClearColor[1] = 0.0f; mClearColor[2] = 0.0f; } // rojo
+        if (Input::IsKeyPressed(SDLK_2)) { mClearColor[0] = 0.0f; mClearColor[1] = 1.0f; mClearColor[2] = 0.0f; } // verde
+        if (Input::IsKeyPressed(SDLK_3)) { mClearColor[0] = 0.0f; mClearColor[1] = 0.0f; mClearColor[2] = 1.0f; } // azul
+        if (Input::IsKeyPressed(SDLK_4)) { mClearColor[0] = 1.0f; mClearColor[1] = 1.0f; mClearColor[2] = 0.0f; } // amarillo
+        if (Input::IsKeyPressed(SDLK_5)) { mClearColor[0] = 1.0f; mClearColor[1] = 0.0f; mClearColor[2] = 1.0f; } // magenta
+        if (Input::IsKeyPressed(SDLK_6)) { mClearColor[0] = 0.0f; mClearColor[1] = 1.0f; mClearColor[2] = 1.0f; } // cian
+        if (Input::IsKeyPressed(SDLK_7)) { mClearColor[0] = 0.15f; mClearColor[1] = 0.15f; mClearColor[2] = 0.15f; } // gris oscuro
+        if (Input::IsKeyPressed(SDLK_8)) { mClearColor[0] = 0.9f; mClearColor[1] = 0.9f; mClearColor[2] = 0.9f; } // casi blanco
+        if (Input::IsKeyPressed(SDLK_9)) { mClearColor[0] = 0.1f; mClearColor[1] = 0.1f; mClearColor[2] = 0.15f; } // default
 
         // Check if ImGui wants to capture input
         ImGuiIO& io = ImGui::GetIO();
@@ -288,7 +302,8 @@ void Application::Run() {
         SceneManager::Update(deltaTime);
 
         // Clear antes de dibujar
-        Renderer::Clear(0.1f, 0.1f, 0.15f, 1.0f);
+        Renderer::Clear(mClearColor[0], mClearColor[1], mClearColor[2], mClearColor[3]);
+
 
         // Dibujar triángulo de test (si está activado)
         if (showTestTriangle) {
@@ -329,6 +344,7 @@ void Application::Run() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
+    AssetDatabase::Shutdown();
 
     Renderer::Shutdown();
     std::cout << "Engine closed cleanly\n";

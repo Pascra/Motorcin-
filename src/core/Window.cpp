@@ -1,6 +1,7 @@
 ﻿#include "Window.h"
 #include "Rendering/Renderer.h"
 #include "Input.h"
+#include "AssetDatabase.h"
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -129,10 +130,13 @@ void Window::PollEvents()
         case SDL_EVENT_DROP_FILE: {
             if (e.drop.data && e.drop.data[0] != '\0') {
                 std::cout << "File dropped: " << e.drop.data << "\n";
-                Renderer::OnFileDropped(e.drop.data);
+                AssetDatabase::ImportExternalFile(e.drop.data);
             }
             break;
         }
+
+
+        
 
         default:
             break;

@@ -52,6 +52,7 @@ public:
     static void DrawDebugTriangle3D(Camera* camera);
     static void SetDebugMode(bool enabled);
     static bool IsDebugMode();
+    static void UnloadLoadedModel();
 
 private:
     static unsigned int sProgram;

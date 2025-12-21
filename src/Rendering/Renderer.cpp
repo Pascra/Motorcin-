@@ -259,6 +259,9 @@ void Renderer::DrawTriangle() {
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
 }
+void Renderer::UnloadLoadedModel() {
+    ClearModelData();
+}
 
 void Renderer::DrawRectangleIndexed(bool wireframe) {
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

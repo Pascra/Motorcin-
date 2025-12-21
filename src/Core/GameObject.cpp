@@ -81,7 +81,7 @@ void GameObject::RemoveChild(GameObject* child) {
 void GameObject::RemoveComponent(Component* comp) {
     auto it = std::find(mComponents.begin(), mComponents.end(), comp);
     if (it != mComponents.end()) {
-        delete* it;
+        delete *it;
         mComponents.erase(it);
     }
 }
