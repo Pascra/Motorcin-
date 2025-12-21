@@ -46,7 +46,6 @@ unsigned int Renderer::sDebugTriVAO = 0;
 unsigned int Renderer::sDebugTriVBO = 0;
 
 static bool sInitialized = false;
-static bool sNeedsAutofocus = false;
 
 // ============================================================
 // SHADERS
@@ -317,8 +316,6 @@ bool Renderer::LoadModelFromPath(const std::string& path) {
     std::filesystem::path modelPath(path);
     std::string directory = modelPath.parent_path().string();
     if (directory.empty()) directory = ".";
-
-    return true;
 
     // ============================================================
     // CARGAR MATERIALES Y TEXTURAS
@@ -825,25 +822,4 @@ void Renderer::DrawDebugCube(Camera* camera, float x, float y, float z, float si
     glEnable(GL_DEPTH_TEST);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glLineWidth(1.0f);
-}
-
-bool Renderer::NeedsAutofocus() {
-    return sNeedsAutofocus;
-}
-
-void Renderer::GetAutofocusData(float& centerX, float& centerY, float& centerZ, float& distance) {
-    centerX = sModelCenterX * sModelScale;
-    centerY = sModelCenterY * sModelScale;
-    centerZ = sModelCenterZ * sModelScale;
-
-    // Distancia = 3x el tamaño del modelo para verlo completo
-    distance = (sModelSize * sModelScale) * 3.0f;
-
-    std::cout << "🎯 Autofocus data:" << std::endl;
-    std::cout << "   Center: (" << centerX << ", " << centerY << ", " << centerZ << ")" << std::endl;
-    std::cout << "   Distance: " << distance << std::endl;
-}
-
-void Renderer::ClearAutofocusFlag() {
-    sNeedsAutofocus = false;
 }

@@ -83,7 +83,7 @@ Window::Window(const std::string& title, int width, int height)
     glViewport(0, 0, width, height);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glCullFace(GL_BACK);
+    glCullFace(GL_FRONT);
     glDepthFunc(GL_LESS);
     glEnable(GL_CULL_FACE);
 

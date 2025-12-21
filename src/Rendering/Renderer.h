@@ -53,10 +53,6 @@ public:
     static void SetDebugMode(bool enabled);
     static bool IsDebugMode();
 
-    static bool NeedsAutofocus();
-    static void GetAutofocusData(float& centerX, float& centerY, float& centerZ, float& distance);
-    static void ClearAutofocusFlag();
-
 private:
     static unsigned int sProgram;
     static unsigned int sTriVAO, sTriVBO;
