@@ -8,17 +8,18 @@ public:
     ~Window();
 
     bool ShouldClose() const { return shouldClose || !valid_; }
-
-    // ⬇⬇⬇ AÑADE ESTO
     bool IsValid() const { return valid_; }
-    // ⬆⬆⬆
 
     void PollEvents();
     void SwapBuffers();
 
+    // For ImGui
+    SDL_Window* GetSDLWindow() const { return window; }
+    SDL_GLContext GetGLContext() const { return glContext; }
+
 private:
     SDL_Window* window = nullptr;
     SDL_GLContext glContext = nullptr;
-    bool          shouldClose = false;
-    bool          valid_ = false;
+    bool shouldClose = false;
+    bool valid_ = false;
 };

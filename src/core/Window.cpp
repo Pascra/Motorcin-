@@ -4,6 +4,8 @@
 
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
 #include <iostream>
 #include <string>
 
@@ -96,7 +98,19 @@ void Window::PollEvents()
 {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
-        Input::ProcessEvent(e);
+        // ImGui procesa el evento PRIMERO
+        ImGui_ImplSDL3_ProcessEvent(&e);
+
+        // Si ImGui está usando el mouse/teclado, no procesamos el evento en nuestro sistema
+        ImGuiIO& io = ImGui::GetIO();
+
+        bool imguiWantsMouse = io.WantCaptureMouse;
+        bool imguiWantsKeyboard = io.WantCaptureKeyboard;
+
+        // Solo procesar eventos en Input si ImGui NO los está usando
+        if (!imguiWantsMouse && !imguiWantsKeyboard) {
+            Input::ProcessEvent(e);
+        }
 
         switch (e.type) {
         case SDL_EVENT_QUIT:
@@ -104,7 +118,7 @@ void Window::PollEvents()
             break;
 
         case SDL_EVENT_KEY_DOWN:
-            if (e.key.key == SDLK_ESCAPE)
+            if (e.key.key == SDLK_ESCAPE && !imguiWantsKeyboard)
                 shouldClose = true;
             break;
 
