@@ -9,32 +9,27 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 
-# Define todos los archivos fuente (.cpp y .h)
-set(SOURCE_FILES
-    src/Core/Main.cpp
-    src/Core/Application.cpp
-    src/Core/Application.h
-    src/Core/Window.cpp
-    src/Core/Window.h
-    src/Core/Time.cpp
-    src/Core/Time.h
-    src/Core/Input.cpp
-    src/Core/Input.h
-    
-    src/Rendering/Renderer.cpp
-    src/Rendering/Renderer.h
-    src/Rendering/Shader.cpp
-    src/Rendering/Shader.h
-    src/Rendering/Texture.cpp
-    src/Rendering/Texture.h
-    src/Rendering/Model.cpp
-    src/Rendering/Model.h
-    src/Rendering/Camera.cpp
-    src/Rendering/Camera.h
+# Añade los directorios de inclusión
+include_directories(${CMAKE_SOURCE_DIR}/src)
+
+# Recopila archivos fuente
+file(GLOB_RECURSE SOURCES 
+    "src/*.cpp"
+    "src/**/*.cpp"
 )
 
-add_executable(MotorcinEngine ${SOURCE_FILES})
+file(GLOB_RECURSE HEADERS 
+    "src/*.h"
+    "src/**/*.h"
+)
 
+# Debug: muestra qué archivos encontró (opcional)
+message(STATUS "Archivos fuente encontrados: ${SOURCES}")
+
+# Crea el ejecutable (¡CORREGIDO! era ${SOURCE_FILES})
+add_executable(MotorcinEngine ${SOURCES} ${HEADERS})
+
+# Enlaza las bibliotecas
 target_link_libraries(MotorcinEngine PRIVATE 
     SDL3::SDL3
     glad::glad

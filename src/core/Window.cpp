@@ -1,5 +1,5 @@
 ﻿#include "Window.h"
-#include "Renderer.h"
+#include "Rendering/Renderer.h"
 #include "Input.h"
 
 #include <SDL3/SDL.h>
@@ -82,6 +82,10 @@ Window::Window(const std::string& title, int width, int height)
 
     glViewport(0, 0, width, height);
     glEnable(GL_DEPTH_TEST);
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glCullFace(GL_BACK);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
 
     valid_ = true;
     std::cout << "Window and OpenGL initialized successfully!\n";

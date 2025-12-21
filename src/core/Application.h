@@ -1,7 +1,7 @@
 #pragma once
 #include "Window.h"
-#include "Renderer.h"
-#include "Camera.h"
+#include "Rendering/Renderer.h"
+#include "Rendering/Camera.h"
 #include <string>
 
 class Application {
