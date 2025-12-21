@@ -4,6 +4,7 @@
 #include "SceneManager.h"
 #include "EditorUI.h"
 #include "GameObject.h"
+#include "PlayModeManager.h"
 #include "Rendering/Renderer.h"
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
@@ -52,6 +53,7 @@ void Application::Run() {
     Input::Init();
     Time::Init();
     SceneManager::Init();
+    PlayModeManager::Init();
     EditorUI::Init();
 
     std::cout << "\n=== Motorcin Engine ===\n";
@@ -70,39 +72,113 @@ void Application::Run() {
 
     bool showTestTriangle = false;
 
-    const char* DEFAULT_MODEL = "assets/Street/StreetEnvironment_v01.FBX";
-    bool autoLoadPending = true;
+    const char* DEFAULT_MODEL = "Debug/assets/Street/StreetEnvironment_v01.FBX";
 
-    // Create initial scene
-    GameObject* mainCamera = SceneManager::CreateGameObject("Main Camera");
-    mainCamera->AddComponent<CameraComponent>();
-    mainCamera->GetTransform()->SetPosition(0, 2, 8);
+    // Create initial scene with camera
+    GameObject* mainCameraObj = SceneManager::CreateGameObject("Main Camera");
+    mainCameraObj->AddComponent<CameraComponent>();
+    mainCameraObj->GetTransform()->SetPosition(0, 2, 8);
+
+    std::cout << "[APP] Initial scene created with Main Camera" << std::endl;
+
+    // Auto-load default model
+    std::cout << "\n[APP] Looking for default model: " << DEFAULT_MODEL << std::endl;
+
+    if (std::filesystem::exists(DEFAULT_MODEL)) {
+        std::cout << "[APP] Found! Loading default model..." << std::endl;
+        if (Renderer::LoadModelFromPath(DEFAULT_MODEL)) {
+            std::cout << "[APP] Model loaded successfully!" << std::endl;
+
+            // Register mesh in SceneManager
+            SceneManager::RegisterMesh("Street Environment", 0);
+
+            // Create GameObject for the street model
+            GameObject* streetObj = SceneManager::CreateGameObject("Street Environment");
+            MeshRenderer* renderer = streetObj->AddComponent<MeshRenderer>();
+            renderer->SetMesh(0);
+            renderer->SetColor(0.8f, 0.8f, 0.8f);
+
+            std::cout << "[APP] Street GameObject created in scene" << std::endl;
+
+            // Auto-focus camera on the model
+            float cx, cy, cz;
+            Renderer::GetModelCenter(cx, cy, cz);
+            float size = Renderer::GetModelSize();
+
+            camera->SetSceneSize(size);
+
+            float diagonal = size * std::sqrt(3.0f);
+            float fovRad = 45.0f * 3.14159f / 180.0f;
+            float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
+            distance *= 1.5f;
+
+            std::cout << "\n*** AUTO-FOCUSING ON MODEL ***" << std::endl;
+            std::cout << "Model center: (" << cx << ", " << cy << ", " << cz << ")" << std::endl;
+            std::cout << "Model size: " << size << std::endl;
+            std::cout << "Camera distance: " << distance << std::endl;
+
+            camera->FocusOnPoint(cx, cy, cz, distance);
+
+            float camX, camY, camZ;
+            camera->GetPosition(camX, camY, camZ);
+            std::cout << "Camera position: (" << camX << ", " << camY << ", " << camZ << ")" << std::endl;
+        }
+        else {
+            std::cerr << "[APP] Failed to load model!" << std::endl;
+        }
+    }
+    else {
+        std::cerr << "[APP] Default model not found at: " << DEFAULT_MODEL << std::endl;
+        std::cerr << "[APP] You can drag & drop an FBX file to load it" << std::endl;
+
+        // Intentar rutas alternativas comunes
+        std::vector<std::string> alternativePaths = {
+            "Assets/Street/StreetEnvironment_v01.FBX",
+            "assets/Street/StreetEnvironment_v01.FBX",
+            "Assets/Street/StreetEnvironment_v01.fbx",
+            "assets/Street/StreetEnvironment_v01.fbx",
+            "StreetEnvironment_v01.FBX",
+            "Assets/StreetEnvironment_v01.FBX"
+        };
+
+        bool foundAlternative = false;
+        for (const auto& altPath : alternativePaths) {
+            if (std::filesystem::exists(altPath)) {
+                std::cout << "[APP] Found alternative: " << altPath << std::endl;
+                if (Renderer::LoadModelFromPath(altPath)) {
+                    std::cout << "[APP] Loaded from alternative path!" << std::endl;
+
+                    // Register and create GameObject
+                    SceneManager::RegisterMesh("Street Environment", 0);
+                    GameObject* streetObj = SceneManager::CreateGameObject("Street Environment");
+                    MeshRenderer* renderer = streetObj->AddComponent<MeshRenderer>();
+                    renderer->SetMesh(0);
+
+                    // Auto-focus
+                    float cx, cy, cz;
+                    Renderer::GetModelCenter(cx, cy, cz);
+                    float size = Renderer::GetModelSize();
+                    camera->SetSceneSize(size);
+                    float diagonal = size * std::sqrt(3.0f);
+                    float fovRad = 45.0f * 3.14159f / 180.0f;
+                    float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
+                    distance *= 1.5f;
+                    camera->FocusOnPoint(cx, cy, cz, distance);
+
+                    foundAlternative = true;
+                    break;
+                }
+            }
+        }
+
+        if (!foundAlternative) {
+            std::cout << "[APP] Tip: Make sure your model is in the Assets/Street folder" << std::endl;
+        }
+    }
 
     while (!window->ShouldClose() && !EditorUI::ShouldExit()) {
         Time::Update();
         float deltaTime = Time::GetDeltaTime();
-
-        if (autoLoadPending) {
-            autoLoadPending = false;
-
-            std::cout << "\n[APP] Looking for default model: " << DEFAULT_MODEL << std::endl;
-
-            if (std::filesystem::exists(DEFAULT_MODEL)) {
-                std::cout << "[APP] Found! Loading default model..." << std::endl;
-                if (Renderer::LoadModelFromPath(DEFAULT_MODEL)) {
-                    std::cout << "[APP] Model loaded successfully!" << std::endl;
-
-                    // Register meshes in SceneManager
-                    SceneManager::RegisterMesh("Street Environment", 0);
-                }
-                else {
-                    std::cerr << "[APP] Failed to load model!" << std::endl;
-                }
-            }
-            else {
-                std::cerr << "[APP] Default model not found" << std::endl;
-            }
-        }
 
         Input::Update();
         window->PollEvents();
@@ -161,25 +237,13 @@ void Application::Run() {
             }
         } // Fin del if (!imguiWantsMouse && !imguiWantsKeyboard)
 
-        // AUTO-FOCUS cuando se carga modelo nuevo
-        if (!modelLoadedLastFrame && Renderer::HasLoadedModel()) {
-            float cx, cy, cz;
-            Renderer::GetModelCenter(cx, cy, cz);
-            float size = Renderer::GetModelSize();
+        // Actualizar cámara
+        camera->Update(deltaTime);
 
-            camera->SetSceneSize(size);
-
-            float diagonal = size * std::sqrt(3.0f);
-            float fovRad = 45.0f * 3.14159f / 180.0f;
-            float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
-            distance *= 1.5f;
-
-            camera->FocusOnPoint(cx, cy, cz, distance);
+        // Update scene ONLY if playing
+        if (PlayModeManager::IsPlaying()) {
+            SceneManager::Update(deltaTime);
         }
-
-        modelLoadedLastFrame = Renderer::HasLoadedModel();
-
-        // Tecla F para re-enfocar manualmente
         if (Input::IsKeyPressed(SDLK_F) && Renderer::HasLoadedModel()) {
             float cx, cy, cz;
             Renderer::GetModelCenter(cx, cy, cz);
@@ -248,6 +312,7 @@ void Application::Run() {
         // Draw UI
         EditorUI::BeginFrame();
         EditorUI::DrawMainMenuBar();
+        EditorUI::DrawPlayControls();  // NUEVO: Controles de Play/Pause/Stop
         EditorUI::DrawHierarchy();
         EditorUI::DrawInspector();
         EditorUI::DrawResourceBrowser();
@@ -258,6 +323,7 @@ void Application::Run() {
 
     // Cleanup
     EditorUI::Shutdown();
+    PlayModeManager::Shutdown();
     SceneManager::Shutdown();
 
     ImGui_ImplOpenGL3_Shutdown();

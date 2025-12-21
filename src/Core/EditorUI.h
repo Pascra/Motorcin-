@@ -16,6 +16,7 @@ public:
     static void DrawInspector();
     static void DrawMainMenuBar();
     static void DrawResourceBrowser();
+    static void DrawPlayControls();  // NUEVO
 
     // Drag & Drop
     static void HandleDragDrop();

@@ -1,6 +1,7 @@
-#include "EditorUI.h"
+﻿#include "EditorUI.h"
 #include "SceneManager.h"
 #include "GameObject.h"
+#include "PlayModeManager.h"
 #include "Rendering/Texture.h"
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
@@ -292,6 +293,15 @@ void EditorUI::DrawInspector() {
     GameObject* selected = SceneManager::GetSelectedObject();
 
     if (selected) {
+        // Si está en modo Play, mostrar advertencia
+        bool isPlaying = PlayModeManager::IsPlaying();
+        if (isPlaying) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+            ImGui::TextWrapped("⚠ Playing: Changes will be lost when stopping");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+        }
+
         // Header with ID
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
         ImGui::Text("ID: %u", selected->GetID());
@@ -475,4 +485,102 @@ void EditorUI::HandleDragDrop() {
 
 bool EditorUI::IsWindowHovered() {
     return ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+}
+
+void EditorUI::DrawPlayControls() {
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f - 150, 30), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, 60), ImGuiCond_Always);
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoSavedSettings;
+
+    ImGui::Begin("PlayControls", nullptr, flags);
+
+    PlayMode mode = PlayModeManager::GetPlayMode();
+
+    // Play button
+    if (mode == PlayMode::STOPPED || mode == PlayMode::PAUSED) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.6f, 0.1f, 1.0f));
+    }
+    else {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.5f, 0.1f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.5f, 0.1f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.5f, 0.1f, 0.5f));
+    }
+
+    if (ImGui::Button("▶ Play", ImVec2(90, 40))) {
+        PlayModeManager::Play();
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SameLine();
+
+    // Pause button
+    bool canPause = (mode == PlayMode::PLAYING);
+    if (!canPause) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+    }
+    else {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.7f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.1f, 1.0f));
+    }
+
+    if (ImGui::Button("⏸ Pause", ImVec2(90, 40)) && canPause) {
+        PlayModeManager::Pause();
+    }
+    ImGui::PopStyleColor(3);
+
+    ImGui::SameLine();
+
+    // Stop button
+    bool canStop = (mode != PlayMode::STOPPED);
+    if (!canStop) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+    }
+    else {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
+    }
+
+    if (ImGui::Button("⏹ Stop", ImVec2(90, 40)) && canStop) {
+        PlayModeManager::Stop();
+    }
+    ImGui::PopStyleColor(3);
+
+    // Status text
+    ImGui::Spacing();
+    const char* statusText = "";
+    ImVec4 statusColor;
+
+    switch (mode) {
+    case PlayMode::PLAYING:
+        statusText = "▶ PLAYING";
+        statusColor = ImVec4(0.2f, 1.0f, 0.2f, 1.0f);
+        break;
+    case PlayMode::PAUSED:
+        statusText = "⏸ PAUSED";
+        statusColor = ImVec4(1.0f, 1.0f, 0.2f, 1.0f);
+        break;
+    case PlayMode::STOPPED:
+        statusText = "⏹ STOPPED";
+        statusColor = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+        break;
+    }
+
+    float textWidth = ImGui::CalcTextSize(statusText).x;
+    ImGui::SetCursorPosX((300 - textWidth) * 0.5f);
+    ImGui::TextColored(statusColor, "%s", statusText);
+
+    ImGui::End();
 }
