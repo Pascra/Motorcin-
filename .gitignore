@@ -26,4 +26,7 @@ vcpkg-manifest-install.log
 ## Manifest Mode
 vcpkg_installed/
 
-/Motorcin/build/
+build/
+
+## Visual studio cache
+.vs/

@@ -1,58 +1,49 @@
-cmake_minimum_required(VERSION 3.22)
-project(Motorcin CXX)
+cmake_minimum_required(VERSION 3.20)
+project(MotorcinEngine)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(DEFINED ENV{VCPKG_ROOT})
-  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-endif()
-
+# Encuentra los paquetes necesarios
 find_package(SDL3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
 
-# STB_IMAGE (header-only)
-# Descarga stb_image.h y colócalo en: src/external/stb_image.h
-
-add_executable(Motorcin
-  src/Main.cpp
-  src/core/Application.cpp
-  src/core/Window.cpp
-  src/core/Renderer.cpp
-  src/core/Shader.cpp
-  src/core/Model.cpp
-  src/core/Input.cpp
-  src/core/Time.cpp
-  src/core/Camera.cpp
-  src/core/Texture.cpp
+# Define todos los archivos fuente (.cpp y .h)
+set(SOURCE_FILES
+    src/Core/Main.cpp
+    src/Core/Application.cpp
+    src/Core/Application.h
+    src/Core/Window.cpp
+    src/Core/Window.h
+    src/Core/Time.cpp
+    src/Core/Time.h
+    src/Core/Input.cpp
+    src/Core/Input.h
+    
+    src/Rendering/Renderer.cpp
+    src/Rendering/Renderer.h
+    src/Rendering/Shader.cpp
+    src/Rendering/Shader.h
+    src/Rendering/Texture.cpp
+    src/Rendering/Texture.h
+    src/Rendering/Model.cpp
+    src/Rendering/Model.h
+    src/Rendering/Camera.cpp
+    src/Rendering/Camera.h
 )
 
-target_include_directories(Motorcin PRIVATE 
-  src
-  src/external
-)
+add_executable(MotorcinEngine ${SOURCE_FILES})
 
-if (MSVC)
-  target_compile_options(Motorcin PRIVATE /MP)
-  target_compile_definitions(Motorcin PRIVATE NOMINMAX)
-endif()
-
-target_compile_definitions(Motorcin PRIVATE SDL_MAIN_HANDLED)
-
-target_link_libraries(Motorcin
-  PRIVATE
+target_link_libraries(MotorcinEngine PRIVATE 
     SDL3::SDL3
     glad::glad
     assimp::assimp
 )
 
-if (WIN32)
-  add_custom_command(TARGET Motorcin POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:SDL3::SDL3>
-      $<TARGET_FILE_DIR:Motorcin>)
-  add_custom_command(TARGET Motorcin POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      $<TARGET_FILE:assimp::assimp>
-      $<TARGET_FILE_DIR:Motorcin>)
-endif()
+# Copiar assets al directorio de build
+add_custom_command(TARGET MotorcinEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    $<TARGET_FILE_DIR:MotorcinEngine>/assets
+)

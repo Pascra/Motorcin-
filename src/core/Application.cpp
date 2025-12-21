@@ -4,19 +4,16 @@
 #include "Renderer.h"
 #include <iostream>
 #include <cmath>
+#include <filesystem>
 
 Application::Application() {
-    window = new Window("Motorcin Engine", 800, 600);
+    window = new Window("Motorcin Engine", 1280, 720);
     camera = new Camera();
 
-    // Posición inicial: cámara en (0, 0, 10) mirando hacia (0, 0, 0)
-    camera->SetPosition(0, 0, 10);
+    camera->SetPosition(0, 2, 8);
     camera->LookAt(0, 0, 0);
 
-    std::cout << "[APP] Camera positioned for test triangle" << std::endl;
-    float x, y, z;
-    camera->GetPosition(x, y, z);
-    std::cout << "[APP] Camera at: (" << x << ", " << y << ", " << z << ")" << std::endl;
+    std::cout << "[APP] Camera initialized" << std::endl;
 }
 
 Application::~Application() {
@@ -38,6 +35,16 @@ void Application::Run() {
     Input::Init();
     Time::Init();
 
+    // 🆕 AUTO-CARGAR BAKERHOUSE AL INICIO
+    std::string bakerHousePath = "assets/BakerHouse.fbx";
+    if (std::filesystem::exists(bakerHousePath)) {
+        std::cout << "\n[APP] Auto-loading BakerHouse..." << std::endl;
+        Renderer::LoadModelFromPath(bakerHousePath);
+    }
+    else {
+        std::cerr << "[APP] WARNING: BakerHouse.fbx not found at " << bakerHousePath << std::endl;
+    }
+
     std::cout << "\n=== Motorcin Engine ===\n";
     std::cout << "Controls:\n";
     std::cout << "  - Drag & Drop FBX files to load\n";
@@ -52,7 +59,7 @@ void Application::Run() {
     std::cout << "  - C to toggle backface culling\n";
     std::cout << "  - ESC to exit\n\n";
 
-    bool showTestTriangle = true;
+    bool showTestTriangle = false; // Cambiado a false por defecto
 
     while (!window->ShouldClose()) {
         Time::Update();
@@ -61,28 +68,23 @@ void Application::Run() {
         Input::Update();
         window->PollEvents();
 
-        // ========================================
-        // CONTROLES DE CÁMARA
-        // ========================================
-
-        // 1. ZOOM con scroll (PRIORITARIO - funciona siempre)
+        // ZOOM con scroll
         float wheel = Input::GetMouseWheelDelta();
         if (wheel != 0.0f) {
             camera->Zoom(wheel);
         }
 
-        // 2. ROTACIÓN con clic derecho (solo si NO hay scroll)
+        // ROTACIÓN con clic derecho
         if (Input::IsCameraControlActive() && wheel == 0.0f) {
             int dx, dy;
             Input::GetMouseDelta(dx, dy);
 
-            // Solo rotar si el movimiento es significativo
             if (abs(dx) > 1 || abs(dy) > 1) {
                 camera->Rotate(static_cast<float>(-dx), static_cast<float>(-dy));
             }
         }
 
-        // 3. MOVIMIENTO con WASD/QE
+        // MOVIMIENTO con WASD/QE
         float moveSpeed = 5.0f;
 
         if (Input::IsKeyDown(SDLK_W)) {
@@ -112,10 +114,7 @@ void Application::Run() {
             camera->SetPosition(px, py - moveSpeed * deltaTime, pz);
         }
 
-        // ========================================
         // AUTO-FOCUS cuando se carga modelo nuevo
-        // ========================================
-
         if (!modelLoadedLastFrame && Renderer::HasLoadedModel()) {
             float cx, cy, cz;
             Renderer::GetModelCenter(cx, cy, cz);
@@ -126,18 +125,7 @@ void Application::Run() {
             float diagonal = size * std::sqrt(3.0f);
             float fovRad = 45.0f * 3.14159f / 180.0f;
             float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
-
-            if (size > 100.0f) {
-                distance *= 1.5f;
-            }
-            else {
-                distance *= 1.2f;
-            }
-
-            float minDist = size * 0.5f;
-            if (distance < minDist) {
-                distance = minDist;
-            }
+            distance *= 1.5f; // Factor de distancia
 
             std::cout << "\n*** AUTO-FOCUSING ON MODEL ***" << std::endl;
             std::cout << "Model center: (" << cx << ", " << cy << ", " << cz << ")" << std::endl;
@@ -149,14 +137,6 @@ void Application::Run() {
             float camX, camY, camZ;
             camera->GetPosition(camX, camY, camZ);
             std::cout << "Camera position: (" << camX << ", " << camY << ", " << camZ << ")" << std::endl;
-
-            // 🆕 AÑADIR: Mostrar distancia real calculada
-            float dx = camX - cx;
-            float dy = camY - cy;
-            float dz = camZ - cz;
-            float actualDistance = std::sqrt(dx * dx + dy * dy + dz * dz);
-            std::cout << "Actual distance to model: " << actualDistance << " units" << std::endl;
-            std::cout << "====================================\n" << std::endl;
         }
 
         modelLoadedLastFrame = Renderer::HasLoadedModel();
@@ -172,18 +152,9 @@ void Application::Run() {
             float diagonal = size * std::sqrt(3.0f);
             float fovRad = 45.0f * 3.14159f / 180.0f;
             float distance = (diagonal * 0.5f) / std::tan(fovRad * 0.5f);
-            distance *= 1.2f;
-
-            float minDist = size * 0.5f;
-            if (distance < minDist) {
-                distance = minDist;
-            }
+            distance *= 1.5f;
 
             camera->FocusOnPoint(cx, cy, cz, distance);
-
-            float camX, camY, camZ;
-            camera->GetPosition(camX, camY, camZ);
-            std::cout << "Camera re-focused. Position: (" << camX << ", " << camY << ", " << camZ << ")\n";
         }
 
         // Tecla TAB para toggle wireframe
@@ -214,7 +185,7 @@ void Application::Run() {
         // Clear antes de dibujar
         Renderer::Clear(0.1f, 0.1f, 0.15f, 1.0f);
 
-        // Dibujar triángulo de test
+        // Dibujar triángulo de test (si está activado)
         if (showTestTriangle) {
             Renderer::DrawDebugTriangle3D(camera);
         }
