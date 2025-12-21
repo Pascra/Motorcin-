@@ -4,6 +4,10 @@
   "dependencies": [
     "sdl3",
     "glad",
-     "assimp"
+    "assimp",
+    {
+      "name": "imgui",
+      "features": ["sdl3-binding", "opengl3-binding"]
+    }
   ]
 }

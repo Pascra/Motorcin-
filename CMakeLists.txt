@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(assimp CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
 # Añade los directorios de inclusión
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -26,7 +27,7 @@ file(GLOB_RECURSE HEADERS
 # Debug: muestra qué archivos encontró (opcional)
 message(STATUS "Archivos fuente encontrados: ${SOURCES}")
 
-# Crea el ejecutable (¡CORREGIDO! era ${SOURCE_FILES})
+# Crea el ejecutable
 add_executable(MotorcinEngine ${SOURCES} ${HEADERS})
 
 # Enlaza las bibliotecas
@@ -34,6 +35,7 @@ target_link_libraries(MotorcinEngine PRIVATE
     SDL3::SDL3
     glad::glad
     assimp::assimp
+    imgui::imgui
 )
 
 # Copiar assets al directorio de build
